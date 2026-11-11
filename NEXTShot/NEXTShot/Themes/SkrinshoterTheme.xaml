@@ -1,0 +1,293 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="clr-namespace:NEXTShot.Converters"
+                    xmlns:ctl="clr-namespace:NEXTShot.Controls">
+    <conv:PackUriToImageConverter x:Key="Skr.PackUriConverter"/>
+    <conv:CaptureToolbarIconConverter x:Key="Skr.CaptureToolbarIconConverter"/>
+    <Color x:Key="Skr.AccentColor">#FF2EA3FF</Color>
+    <Color x:Key="Skr.AccentHoverColor">#FF55B4FF</Color>
+    <Color x:Key="Skr.PanelColor">#FF252526</Color>
+    <Color x:Key="Skr.PanelLightColor">#FF2D2D30</Color>
+    <Color x:Key="Skr.BorderColor">#FF3F3F46</Color>
+    <Color x:Key="Skr.TextColor">#FFF3F3F3</Color>
+    <Color x:Key="Skr.SubtextColor">#FFB0B0B0</Color>
+    <Color x:Key="Skr.SelectionBorderColor">#FF2EA3FF</Color>
+    <Color x:Key="Skr.OverlayDimColor">#99000000</Color>
+
+    <SolidColorBrush x:Key="Skr.AccentBrush" Color="{StaticResource Skr.AccentColor}" />
+    <SolidColorBrush x:Key="Skr.AccentHoverBrush" Color="{StaticResource Skr.AccentHoverColor}" />
+    <SolidColorBrush x:Key="Skr.PanelBrush" Color="{StaticResource Skr.PanelColor}" />
+    <SolidColorBrush x:Key="Skr.PanelLightBrush" Color="{StaticResource Skr.PanelLightColor}" />
+    <SolidColorBrush x:Key="Skr.BorderBrush" Color="{StaticResource Skr.BorderColor}" />
+    <SolidColorBrush x:Key="Skr.TextBrush" Color="{StaticResource Skr.TextColor}" />
+    <SolidColorBrush x:Key="Skr.SubtextBrush" Color="{StaticResource Skr.SubtextColor}" />
+    <SolidColorBrush x:Key="Skr.OverlayDimBrush" Color="{StaticResource Skr.OverlayDimColor}" />
+
+    <FontFamily x:Key="Skr.Font">Segoe UI</FontFamily>
+
+    <Style x:Key="Skr.ContextMenu" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource Skr.PanelLightBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Skr.BorderBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+
+    <Style x:Key="Skr.ActionButton" TargetType="Button">
+        <Setter Property="MinWidth" Value="88" />
+        <Setter Property="MinHeight" Value="64" />
+        <Setter Property="Margin" Value="4,0" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.ToolToggle" TargetType="ToggleButton">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Skr.AccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#44FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.SidebarIconButton" TargetType="Button">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#44FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.BlueButton" TargetType="Button">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="16,4" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="{StaticResource Skr.AccentBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.SettingsTab" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{StaticResource Skr.TextBrush}" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Bd" Background="Transparent" BorderBrush="{StaticResource Skr.BorderBrush}" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Skr.AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource Skr.AccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.CaptureToolbar" TargetType="Border">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.28"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.CaptureToolButton" TargetType="Button">
+        <Setter Property="Width" Value="38"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Margin" Value="1"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="Foreground" Value="#FF2B2B2B"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            BorderBrush="#FFE0E0E0" BorderThickness="0"
+                            CornerRadius="8" Padding="2">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFF5F8FA"/>
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFE8F4FC"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <SolidColorBrush x:Key="Skr.CaptureTextBrush" Color="#FF2B2B2B"/>
+
+    <Style x:Key="Skr.CapturePickerMenu" TargetType="ContextMenu">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource Skr.CaptureTextBrush}"/>
+        <Setter Property="BorderBrush" Value="#FFE0E0E0"/>
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="MinWidth" Value="160"/>
+    </Style>
+
+    <Style x:Key="Skr.CapturePickerMenuItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource Skr.CaptureTextBrush}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent" Margin="2" Padding="12,8"
+                            CornerRadius="6" SnapsToDevicePixels="True">
+                        <Grid>
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
+                                              HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CheckMark" Text="✓" FontWeight="Bold" FontSize="14"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="{StaticResource Skr.AccentBrush}" Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFE8F4FC"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFD6EBF9"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Skr.AccentBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.CaptureToolImageButton" TargetType="Button" BasedOn="{StaticResource Skr.CaptureToolButton}">
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid Width="22" Height="22">
+                        <Image x:Name="IconNormal" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Source="{Binding Converter={StaticResource Skr.PackUriConverter}}"/>
+                        <Image x:Name="IconChecked" Stretch="Uniform" Visibility="Collapsed"
+                               RenderOptions.BitmapScalingMode="HighQuality">
+                            <Image.Source>
+                                <Binding Path="(ctl:CaptureToolIcon.CheckedSource)"
+                                         RelativeSource="{RelativeSource AncestorType=Button}"
+                                         Converter="{StaticResource Skr.PackUriConverter}"/>
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=(ctl:CaptureToolIcon.IsSelected), RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                            <Setter TargetName="IconNormal" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="IconChecked" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Skr.GroupHeader" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Skr.AccentBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Margin" Value="0,12,0,6" />
+        <Setter Property="FontFamily" Value="{StaticResource Skr.Font}" />
+    </Style>
+</ResourceDictionary>

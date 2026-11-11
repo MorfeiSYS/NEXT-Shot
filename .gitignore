@@ -1,0 +1,36 @@
+# Build
+[Bb]in/
+[Oo]bj/
+build-check/
+installer/staging/
+installer/output/
+*.user
+*.suo
+.vs/
+
+# Publish / artifacts
+*.pdb
+*.mp4
+*.zip
+
+# ffmpeg (downloaded by _tools/FetchFfmpeg.ps1)
+**/ffmpeg/ffmpeg.exe
+
+# OS / IDE
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Secrets
+.env
+.env.*
+*.pfx
+*.key
+credentials*.json
+
+# Reference binaries (not part of this repo)
+/Skrinshoter.exe
+/scrrec/

@@ -1,0 +1,167 @@
+<Window x:Class="NEXTShot.Windows.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Height="520" Width="780" WindowStartupLocation="CenterScreen"
+        Closing="Window_OnClosing">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/SettingsShellTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="1"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{StaticResource Set.Shell.SidebarBgBrush}">
+            <ListBox x:Name="NavList" Style="{StaticResource Set.NavList}" ItemContainerStyle="{StaticResource Set.NavItem}"
+                     SelectionChanged="NavList_OnSelectionChanged">
+                <ListBoxItem Tag="general">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Общие" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="hotkeys">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Горячие клавиши" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="screenshots">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Скриншоты" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="video">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Видео" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="about">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="О программе" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+            </ListBox>
+        </Border>
+
+        <Border Grid.Column="1" Background="{StaticResource Set.Shell.BorderBrush}"/>
+
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" Padding="28,24">
+            <Grid>
+            <StackPanel x:Name="PageGeneral" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource Set.PageTitle}" Text="Общие"/>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Общие настройки"/>
+                <CheckBox x:Name="ChkAutostart" Content="Запускать при старте Windows" Margin="0,6"/>
+                <CheckBox x:Name="ChkSilent" Content="Тихий режим" Margin="0,6"/>
+                <CheckBox x:Name="ChkUpdates" Content="Проверять наличие обновлений" Margin="0,6"/>
+            </StackPanel>
+
+            <StackPanel x:Name="PageHotkeys" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource Set.PageTitle}" Text="Горячие клавиши"/>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Горячие клавиши"/>
+                <TextBlock Margin="0,6" Foreground="{StaticResource Set.Shell.SubtextBrush}" Text="Print Screen — скриншот области экрана"/>
+                <TextBlock Margin="0,6" Foreground="{StaticResource Set.Shell.SubtextBrush}" Text="Alt + Print Screen — скриншот активного окна"/>
+                <TextBlock Margin="0,6" Foreground="{StaticResource Set.Shell.SubtextBrush}" Text="Shift + Print Screen — скриншот всего экрана"/>
+                <TextBlock Margin="0,6" Foreground="{StaticResource Set.Shell.SubtextBrush}" Text="Ctrl + Shift + Print Screen — запись/стоп видео"/>
+            </StackPanel>
+
+            <StackPanel x:Name="PageScreenshots" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource Set.PageTitle}" Text="Скриншоты"/>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Формат и качество"/>
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Сохранять в формате" VerticalAlignment="Center" Width="200"/>
+                    <ComboBox x:Name="CmbFormat" Width="180">
+                        <ComboBoxItem Content="PNG"/>
+                        <ComboBoxItem Content="JPEG"/>
+                    </ComboBox>
+                </StackPanel>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Куда сохранять скриншоты"/>
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtShotPath" Grid.Column="0" MinHeight="28" VerticalContentAlignment="Center"/>
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Set.SecondaryButton}" Content="Обзор" Click="BrowseShotPath_OnClick"/>
+                </Grid>
+                <CheckBox x:Name="ChkPlaySound" Content="Проигрывать звук" Margin="0,12,0,0"/>
+                <CheckBox x:Name="ChkAlwaysEditor" Content="Всегда активировать редактор" Margin="0,6"/>
+            </StackPanel>
+
+            <StackPanel x:Name="PageVideo" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource Set.PageTitle}" Text="Видео"/>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Куда сохранять видео"/>
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtVideoPath" Grid.Column="0" MinHeight="28" VerticalContentAlignment="Center"/>
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Set.SecondaryButton}" Content="Обзор" Click="BrowseVideoPath_OnClick"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Качество записи"/>
+                <ComboBox x:Name="CmbVideoQuality" Width="320" HorizontalAlignment="Left" Margin="0,4">
+                    <ComboBoxItem Content="Высокое (FullHD/1080p, 30fps)"/>
+                    <ComboBoxItem Content="Высокое+ (FullHD/1080p, 60fps)"/>
+                    <ComboBoxItem Content="Максимальное (4K/2160p, 30fps)"/>
+                </ComboBox>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Прочее"/>
+                <CheckBox x:Name="ChkVideoCursor" Content="Показывать курсор мыши" Margin="0,6"/>
+                <CheckBox x:Name="ChkVideoClicks" Content="Показывать подсветку кликов мыши" Margin="0,6"/>
+                <CheckBox x:Name="ChkVideoControlPanel" Content="Показывать панель управления во время записи" Margin="0,6"/>
+                <CheckBox x:Name="ChkVideoStartImmediate" Content="Начинать запись сразу после выделения области" Margin="0,6"/>
+            </StackPanel>
+
+            <DockPanel x:Name="PageAbout" Visibility="Collapsed" LastChildFill="True" MinHeight="380">
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Set.PageTitle}" Text="О программе"/>
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,24,0,0">
+                    <TextBlock x:Name="TxtSiteLink" Style="{StaticResource Set.Link}" Text="https://skrinshoter.ru" MouseLeftButtonUp="SiteLink_OnClick"/>
+                    <Button HorizontalAlignment="Right" Margin="0,16,0,0" Style="{StaticResource Set.SecondaryButton}"
+                            Content="Сообщить об ошибке" Click="ReportBug_OnClick"/>
+                </StackPanel>
+                <StackPanel>
+                    <Grid Margin="0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Версия:" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtVersion" Grid.Column="1" VerticalAlignment="Center"/>
+                        <Button Grid.Column="2" Style="{StaticResource Set.SecondaryButton}" Content="Проверить обновления" Click="CheckUpdates_OnClick"/>
+                    </Grid>
+                    <Grid Margin="0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="ID программы:" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtProgramId" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Style="{StaticResource Set.SecondaryButton}" ToolTip="Копировать" Click="CopyId_OnClick">
+                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets"/>
+                        </Button>
+                    </Grid>
+                    <Grid Margin="0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Лицензия:" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="Базовая" VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+            </DockPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

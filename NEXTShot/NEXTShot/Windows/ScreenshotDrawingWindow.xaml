@@ -1,0 +1,39 @@
+<Window x:Class="NEXTShot.Windows.ScreenshotDrawingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Скриншотер" WindowStartupLocation="CenterScreen" Background="{StaticResource Skr.PanelBrush}"
+        MinWidth="640" MinHeight="480" KeyDown="Window_OnKeyDown">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="52"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{StaticResource Skr.PanelLightBrush}" BorderBrush="{StaticResource Skr.BorderBrush}" BorderThickness="0,0,1,0">
+            <StackPanel Margin="6,8">
+                <ToggleButton x:Name="ToolPen" Style="{StaticResource Skr.ToolToggle}" Content="&#xE70F;" IsChecked="True" Click="ToolPen_OnClick" ToolTip="Карандаш (P)"/>
+                <ToggleButton Style="{StaticResource Skr.ToolToggle}" Content="&#xE71A;" Click="ToolInk_OnClick" ToolTip="Стрелка (A)"/>
+                <ToggleButton Style="{StaticResource Skr.ToolToggle}" Content="&#xF7AF;" Click="ToolInk_OnClick" ToolTip="Линия (L)"/>
+                <ToggleButton Style="{StaticResource Skr.ToolToggle}" Content="&#xE739;" Click="ToolInk_OnClick" ToolTip="Прямоугольник (R)"/>
+                <ToggleButton Style="{StaticResource Skr.ToolToggle}" Content="&#xECAA;" Click="ToolInk_OnClick" ToolTip="Овал (O)"/>
+                <ToggleButton Style="{StaticResource Skr.ToolToggle}" Content="&#xE8D2;" Click="ToolInk_OnClick" ToolTip="Текст (T)"/>
+                <Separator Margin="0,8" Background="{StaticResource Skr.BorderBrush}"/>
+                <Button Style="{StaticResource Skr.SidebarIconButton}" Content="&#xE7A7;" Click="Undo_OnClick" ToolTip="Отменить (Ctrl+Z)"/>
+            </StackPanel>
+        </Border>
+        <Grid Grid.Column="1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#FF1E1E1E">
+                <Grid x:Name="CanvasHost">
+                    <Image x:Name="BackgroundImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                    <InkCanvas x:Name="DrawingCanvas" Background="Transparent" EditingMode="Ink"/>
+                </Grid>
+            </ScrollViewer>
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="16" Background="{StaticResource Skr.PanelLightBrush}" CornerRadius="6" Padding="8">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource Skr.BlueButton}" Content="Сохранить" Margin="0,0,8,0" Click="Save_OnClick"/>
+                    <Button Style="{StaticResource Skr.BlueButton}" Content="Копировать" Margin="0,0,8,0" Click="Copy_OnClick"/>
+                    <Button Content="Закрыть" Padding="16,4" Click="Close_OnClick" Foreground="{StaticResource Skr.TextBrush}" Background="Transparent" BorderBrush="{StaticResource Skr.BorderBrush}" BorderThickness="1"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,18 @@
+<Window x:Class="NEXTShot.Windows.VideoControlPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" Topmost="True" SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize">
+    <Border x:Name="DragChrome" Background="#F2252526" BorderBrush="#FF2EA3FF" BorderThickness="1" CornerRadius="8" Padding="10,8" Cursor="SizeAll">
+        <StackPanel Orientation="Horizontal">
+            <Ellipse x:Name="RecDot" Width="10" Height="10" Fill="#FF555555" Margin="0,0,10,0" VerticalAlignment="Center"/>
+            <Button x:Name="BtnStart" MinWidth="72" MinHeight="32" Margin="0,0,6,0" Padding="12,4"
+                    Background="#FF2EA3FF" Foreground="White" BorderThickness="0" Cursor="Hand"
+                    Content="Старт" Click="Start_OnClick"/>
+            <Button x:Name="BtnStop" MinWidth="72" MinHeight="32" Padding="12,4"
+                    Background="#FF3F3F46" Foreground="White" BorderThickness="0" Cursor="Hand"
+                    Content="Стоп" Click="Stop_OnClick" IsEnabled="False"/>
+        </StackPanel>
+    </Border>
+</Window>

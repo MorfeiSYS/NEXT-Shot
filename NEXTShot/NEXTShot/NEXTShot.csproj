@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <AssemblyName>NEXTShot</AssemblyName>
+    <RootNamespace>NEXTShot</RootNamespace>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\app.ico" />
+    <Resource Include="Resources\Toolbar\*.png" />
+  </ItemGroup>
+  <PropertyGroup>
+    <FfmpegSource>$(MSBuildThisFileDirectory)ffmpeg\ffmpeg.exe</FfmpegSource>
+    <FetchFfmpegScript>$(MSBuildThisFileDirectory)..\..\_tools\FetchFfmpeg.ps1</FetchFfmpegScript>
+  </PropertyGroup>
+  <Target Name="EnsureFfmpeg" BeforeTargets="PrepareForBuild">
+    <Exec Condition="!Exists('$(FfmpegSource)')" Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(FetchFfmpegScript)&quot;" />
+  </Target>
+  <Target Name="IncludeFfmpegInOutput" AfterTargets="Build">
+    <Copy Condition="Exists('$(FfmpegSource)')" SourceFiles="$(FfmpegSource)" DestinationFiles="$(OutDir)ffmpeg.exe" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="IncludeFfmpegInPublish" AfterTargets="Publish">
+    <Copy Condition="Exists('$(FfmpegSource)')" SourceFiles="$(FfmpegSource)" DestinationFiles="$(PublishDir)ffmpeg.exe" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

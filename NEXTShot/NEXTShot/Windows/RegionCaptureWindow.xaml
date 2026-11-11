@@ -1,0 +1,154 @@
+<Window x:Class="NEXTShot.Windows.RegionCaptureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:NEXTShot.Controls"
+        WindowStyle="None" AllowsTransparency="True" Background="#01000000"
+        Topmost="True" ShowInTaskbar="False" Cursor="Cross" KeyDown="Window_OnKeyDown"
+        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown"
+        PreviewMouseMove="Window_PreviewMouseMove"
+        PreviewMouseLeftButtonUp="Window_PreviewMouseLeftButtonUp">
+    <Window.Resources>
+        <ContextMenu x:Key="ThicknessPickerMenu" Style="{StaticResource Skr.CapturePickerMenu}">
+            <ContextMenu.Resources>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource Skr.CapturePickerMenuItem}"/>
+            </ContextMenu.Resources>
+            <MenuItem Header="2 px — тонкая" Tag="2" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="3 px" Tag="3" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="4 px" Tag="4" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="6 px" Tag="6" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="8 px — жирная" Tag="8" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="10 px" Tag="10" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="12 px" Tag="12" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="14 px" Tag="14" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="16 px" Tag="16" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="18 px" Tag="18" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="20 px" Tag="20" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="24 px" Tag="24" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="28 px" Tag="28" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+            <MenuItem Header="33 px — максимум" Tag="33" IsCheckable="True" Click="ThicknessPick_OnClick"/>
+        </ContextMenu>
+        <ContextMenu x:Key="ColorPickerMenu" Style="{StaticResource Skr.CapturePickerMenu}">
+            <ContextMenu.Resources>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource Skr.CapturePickerMenuItem}"/>
+            </ContextMenu.Resources>
+            <MenuItem Tag="#E74C3C" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="#E74C3C" VerticalAlignment="Center"/>
+                        <TextBlock Text="Красный" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Tag="#2EA3FF" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="#2EA3FF" VerticalAlignment="Center"/>
+                        <TextBlock Text="Синий" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Tag="#2ECC71" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="#2ECC71" VerticalAlignment="Center"/>
+                        <TextBlock Text="Зелёный" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Tag="#F39C12" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="#F39C12" VerticalAlignment="Center"/>
+                        <TextBlock Text="Жёлтый" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Tag="#FFFFFF" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="White" Stroke="#CCCCCC" StrokeThickness="1" VerticalAlignment="Center"/>
+                        <TextBlock Text="Белый" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Tag="#000000" IsCheckable="True" Click="ColorPick_OnClick">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="14" Height="14" Fill="Black" VerticalAlignment="Center"/>
+                        <TextBlock Text="Чёрный" Margin="8,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource Skr.CaptureTextBrush}"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+        </ContextMenu>
+    </Window.Resources>
+    <Canvas x:Name="OverlayCanvas">
+        <Rectangle x:Name="HitLayer" Fill="#01000000" IsHitTestVisible="True"/>
+        <Rectangle x:Name="ShadeTop" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
+        <Rectangle x:Name="ShadeLeft" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
+        <Rectangle x:Name="ShadeRight" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
+        <Rectangle x:Name="ShadeBottom" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
+
+        <Border x:Name="SelectionBorder" BorderBrush="White" BorderThickness="0"
+                Background="Transparent" SnapsToDevicePixels="True" Visibility="Collapsed">
+            <Grid x:Name="CaptureHost" ClipToBounds="True"
+                  PreviewMouseLeftButtonDown="CaptureHost_OnMouseDown"
+                  PreviewMouseMove="CaptureHost_OnMouseMove"
+                  PreviewMouseLeftButtonUp="CaptureHost_OnMouseUp"
+                  LostMouseCapture="CaptureHost_OnLostMouseCapture">
+                <Image x:Name="CapturedPreview" Stretch="Fill" Visibility="Collapsed"/>
+                <Canvas x:Name="ShapeCanvas" Background="Transparent" IsHitTestVisible="True" Panel.ZIndex="0"/>
+                <InkCanvas x:Name="MarkCanvas" Background="Transparent" IsHitTestVisible="False" Visibility="Collapsed" Panel.ZIndex="1"/>
+                <Canvas x:Name="BlurCanvas" Background="Transparent" IsHitTestVisible="False" Panel.ZIndex="2"/>
+            </Grid>
+        </Border>
+
+        <Border x:Name="SizeBadge" Background="#CC1F1F1F" BorderBrush="{StaticResource Skr.AccentBrush}" BorderThickness="1"
+                CornerRadius="3" Padding="8,4" Visibility="Collapsed">
+            <TextBlock x:Name="SizeText" Foreground="{StaticResource Skr.TextBrush}" FontFamily="{StaticResource Skr.Font}" FontSize="12"/>
+        </Border>
+
+        <Canvas x:Name="SelectionChrome" Visibility="Collapsed" IsHitTestVisible="False"/>
+
+        <Border x:Name="RightToolbar" Style="{StaticResource Skr.CaptureToolbar}" Visibility="Collapsed" Width="48">
+            <StackPanel>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Облако" Click="Cloud_OnClick" Content="/Resources/Toolbar/cloud.png"/>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Буфер" Click="Copy_OnClick" Content="/Resources/Toolbar/copy.png"/>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Печать" Click="Print_OnClick" Content="/Resources/Toolbar/print.png"/>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Диск" Click="Save_OnClick" Content="/Resources/Toolbar/save.png"/>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Закрыть" Click="Cancel_OnClick" Content="/Resources/Toolbar/close.png"/>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="BottomToolbar" Style="{StaticResource Skr.CaptureToolbar}" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="BtnToolArrow" Style="{StaticResource Skr.CaptureToolImageButton}"
+                        Content="/Resources/Toolbar/arrow.png"
+                        ctl:CaptureToolIcon.CheckedSource="/Resources/Toolbar/arrow.checked.png"
+                        ToolTip="Стрелка" Click="ToolArrow_OnClick"/>
+                <Button x:Name="BtnToolLine" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/line.png" ToolTip="Линия" Click="ToolLine_OnClick"/>
+                <Button x:Name="BtnToolPen" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/pencil.png" ToolTip="Карандаш" Click="Pen_OnClick"/>
+                <Button x:Name="BtnToolMarker" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/marker.png" ToolTip="Маркер" Click="Marker_OnClick"/>
+                <Rectangle Width="1" Height="24" Margin="4,6" Fill="#FFE8E8E8"/>
+                <Button x:Name="BtnToolRect" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/rectangle.png" ToolTip="Прямоугольник" Click="ToolRect_OnClick"/>
+                <Button x:Name="BtnToolOval" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/oval.png" ToolTip="Овал" Click="ToolOval_OnClick"/>
+                <Button x:Name="BtnToolText" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/text.png" ToolTip="Текст" Click="ToolText_OnClick"/>
+                <Button x:Name="BtnToolStep" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/step.png" ToolTip="Нумерация" Click="ToolStep_OnClick"/>
+                <Button x:Name="BtnToolBlur" Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/blur.png" ToolTip="Размытие" Click="ToolBlur_OnClick"/>
+                <Rectangle Width="1" Height="24" Margin="4,6" Fill="#FFE8E8E8"/>
+                <Button x:Name="BtnThickness" Style="{StaticResource Skr.CaptureToolImageButton}" ToolTip="Толщина линий" ContextMenu="{StaticResource ThicknessPickerMenu}" Click="Thickness_OnClick" Content="/Resources/Toolbar/thickness.png"/>
+                <Button x:Name="BtnColor" Style="{StaticResource Skr.CaptureToolButton}" ToolTip="Цвет линий" ContextMenu="{StaticResource ColorPickerMenu}" Click="Color_OnClick" Padding="6">
+                    <Ellipse x:Name="ColorSwatch" Width="20" Height="20" Stroke="#FFCCCCCC" StrokeThickness="1">
+                        <Ellipse.Fill>
+                            <SolidColorBrush Color="#FFE74C3C"/>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </Button>
+                <Rectangle Width="1" Height="24" Margin="4,6" Fill="#FFE8E8E8"/>
+                <Button x:Name="BtnRecord" Style="{StaticResource Skr.CaptureToolButton}" ToolTip="Запись видео" Click="Record_OnClick">
+                    <Border x:Name="RecordDot" Width="22" Height="22" CornerRadius="11" Background="#FFE74C3C"/>
+                </Button>
+                <Button Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/undo.png" ToolTip="Отменить" Click="UndoInk_OnClick"/>
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>
