@@ -140,12 +140,6 @@ public partial class SettingsWindow : Window
         Clipboard.SetText(ProgramId);
     }
 
-    private void SiteLink_OnClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        try { Process.Start(new ProcessStartInfo("https://skrinshoter.ru") { UseShellExecute = true }); }
-        catch { }
-    }
-
     private void ReportBug_OnClick(object sender, RoutedEventArgs e)
     {
         try

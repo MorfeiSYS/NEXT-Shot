@@ -137,8 +137,7 @@
             <DockPanel x:Name="PageAbout" Visibility="Collapsed" LastChildFill="True" MinHeight="380">
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Set.PageTitle}" Text="О программе"/>
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,24,0,0">
-                    <TextBlock x:Name="TxtSiteLink" Style="{StaticResource Set.Link}" Text="https://skrinshoter.ru" MouseLeftButtonUp="SiteLink_OnClick"/>
-                    <Button HorizontalAlignment="Right" Margin="0,16,0,0" Style="{StaticResource Set.SecondaryButton}"
+                    <Button HorizontalAlignment="Right" Style="{StaticResource Set.SecondaryButton}"
                             Content="Сообщить об ошибке" Click="ReportBug_OnClick"/>
                 </StackPanel>
                 <StackPanel>
