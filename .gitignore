@@ -31,6 +31,3 @@ Desktop.ini
 *.key
 credentials*.json
 
-# Reference binaries (not part of this repo)
-/Skrinshoter.exe
-/scrrec/
