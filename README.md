@@ -36,7 +36,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\_tools\BuildInstaller.ps1
 ## Утилиты разработки
 
 - `_tools/FetchFfmpeg.ps1` — загрузка FFmpeg
-- `_tools/ExtractUi/Program.cs` — извлечение иконок из **вашей локальной** копии `Skrinshoter.exe` (путь передаётся аргументом; бинарник в репозиторий не входит)
 - `_tools/ListRes/` — просмотр embedded-ресурсов сборки
 
 История изменений — [CHANGELOG.md](CHANGELOG.md).
