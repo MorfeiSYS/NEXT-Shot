@@ -8,7 +8,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/SkrinshoterTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <tb:TaskbarIcon x:Key="TrayIcon" ToolTipText="Скриншотер" IconSource="/Resources/app.ico">
+            <tb:TaskbarIcon x:Key="TrayIcon" ToolTipText="NEXT-Shot" IconSource="/Resources/app.ico">
                 <tb:TaskbarIcon.ContextMenu>
                     <ContextMenu Style="{StaticResource Skr.ContextMenu}">
                         <MenuItem Header="Скриншот области" Click="CaptureRegion_OnClick"/>

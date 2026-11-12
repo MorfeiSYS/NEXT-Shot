@@ -1,6 +1,6 @@
-# Downloads ffmpeg.exe (win64) into NEXTShot/NEXTShot/ffmpeg/ for publish.
+# Downloads ffmpeg.exe (win64) into NEXTShot/ffmpeg/ for publish.
 $ErrorActionPreference = 'Stop'
-$destDir = Join-Path $PSScriptRoot '..\NEXTShot\NEXTShot\ffmpeg'
+$destDir = Join-Path $PSScriptRoot '..\NEXTShot\ffmpeg'
 $destExe = Join-Path $destDir 'ffmpeg.exe'
 if (Test-Path $destExe) {
     Write-Host "ffmpeg.exe already present: $destExe"

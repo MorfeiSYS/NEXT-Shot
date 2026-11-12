@@ -2,7 +2,7 @@ namespace NEXTShot.Resources;
 
 public static class SkrinshoterStrings
 {
-    public const string AppName = "Скриншотер";
+    public const string AppName = "NEXT-Shot";
     public const string SettingsWindowTitle = "Настройки";
     public const string TabGeneral = "Общие";
     public const string TabScreenshots = "Скриншоты";

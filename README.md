@@ -1,4 +1,4 @@
-# NEXTShot (Скриншотер)
+# NEXT-Shot
 
 WPF-приложение для Windows: скриншоты области/окна/экрана, разметка на оверлее, запись видео (FFmpeg).
 
@@ -12,10 +12,10 @@ WPF-приложение для Windows: скриншоты области/ок�
 ## Сборка
 
 ```powershell
-dotnet build NEXTShot\NEXTShot\NEXTShot.csproj -c Release
+dotnet build NEXTShot\NEXTShot.csproj -c Release
 ```
 
-При первой сборке скачается `ffmpeg.exe` (BtbN FFmpeg-Builds) в `NEXTShot/NEXTShot/ffmpeg/`.
+При первой сборке скачается `ffmpeg.exe` (BtbN FFmpeg-Builds) в `NEXTShot/ffmpeg/`.
 
 ## Инсталлятор
 
@@ -29,7 +29,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\_tools\BuildInstaller.ps1
 
 | Путь | Назначение |
 |------|------------|
-| `NEXTShot/NEXTShot/` | Основное приложение |
+| `NEXTShot/` | Основное приложение |
 | `_tools/` | FetchFfmpeg, BuildInstaller, утилиты разработки |
 | `installer/` | Inno Setup (`NEXTShot.iss`) |
 

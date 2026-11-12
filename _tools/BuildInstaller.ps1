@@ -1,7 +1,7 @@
 # Publish NEXTShot and compile installer (Inno Setup 6).
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$proj = Join-Path $root 'NEXTShot\NEXTShot\NEXTShot.csproj'
+$proj = Join-Path $root 'NEXTShot\NEXTShot.csproj'
 $iss = Join-Path $root 'installer\NEXTShot.iss'
 $staging = Join-Path $root 'installer\staging'
 $outDir = Join-Path $root 'installer\output'

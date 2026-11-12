@@ -42,7 +42,7 @@ public partial class ScreenshotDrawingWindow : Window
     {
         using var merged = Merge();
         ScreenCaptureService.SaveBitmap(merged, _path, _settings.JpegQuality, _settings.ScreenshotFileType == 1);
-        MessageBox.Show($"Сохранено:\n{_path}", "Скриншотер");
+        MessageBox.Show($"Сохранено:\n{_path}", NEXTShot.Resources.SkrinshoterStrings.AppName);
     }
 
     private void Copy_OnClick(object sender, RoutedEventArgs e)

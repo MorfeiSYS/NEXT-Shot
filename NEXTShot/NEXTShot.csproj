@@ -8,7 +8,7 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <AssemblyName>NEXTShot</AssemblyName>
     <RootNamespace>NEXTShot</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.0.30</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup>
     <FfmpegSource>$(MSBuildThisFileDirectory)ffmpeg\ffmpeg.exe</FfmpegSource>
-    <FetchFfmpegScript>$(MSBuildThisFileDirectory)..\..\_tools\FetchFfmpeg.ps1</FetchFfmpegScript>
+    <FetchFfmpegScript>$(MSBuildThisFileDirectory)..\_tools\FetchFfmpeg.ps1</FetchFfmpegScript>
   </PropertyGroup>
   <Target Name="EnsureFfmpeg" BeforeTargets="PrepareForBuild">
     <Exec Condition="!Exists('$(FfmpegSource)')" Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(FetchFfmpegScript)&quot;" />

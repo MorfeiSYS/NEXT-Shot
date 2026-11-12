@@ -11,13 +11,26 @@
         </ResourceDictionary>
     </Window.Resources>
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220"/>
             <ColumnDefinition Width="1"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource Set.Shell.SidebarBgBrush}">
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Padding="16,12" BorderBrush="{StaticResource Set.Shell.BorderBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource Set.Shell.BgBrush}">
+            <DockPanel LastChildFill="True">
+                <TextBlock x:Name="TxtHeaderAppName" DockPanel.Dock="Left" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtHeaderVersion" DockPanel.Dock="Right" VerticalAlignment="Center"
+                           Foreground="{StaticResource Set.Shell.SubtextBrush}"/>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource Set.Shell.SidebarBgBrush}">
             <ListBox x:Name="NavList" Style="{StaticResource Set.NavList}" ItemContainerStyle="{StaticResource Set.NavItem}"
                      SelectionChanged="NavList_OnSelectionChanged">
                 <ListBoxItem Tag="general">
@@ -53,9 +66,9 @@
             </ListBox>
         </Border>
 
-        <Border Grid.Column="1" Background="{StaticResource Set.Shell.BorderBrush}"/>
+        <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource Set.Shell.BorderBrush}"/>
 
-        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" Padding="28,24">
+        <ScrollViewer Grid.Row="1" Grid.Column="2" VerticalScrollBarVisibility="Auto" Padding="28,24">
             <Grid>
             <StackPanel x:Name="PageGeneral" Visibility="Collapsed">
                 <TextBlock Style="{StaticResource Set.PageTitle}" Text="Общие"/>
@@ -129,16 +142,9 @@
                             Content="Сообщить об ошибке" Click="ReportBug_OnClick"/>
                 </StackPanel>
                 <StackPanel>
-                    <Grid Margin="0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Версия:" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtVersion" Grid.Column="1" VerticalAlignment="Center"/>
-                        <Button Grid.Column="2" Style="{StaticResource Set.SecondaryButton}" Content="Проверить обновления" Click="CheckUpdates_OnClick"/>
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,8">
+                        <Button x:Name="BtnCheckUpdates" Style="{StaticResource Set.SecondaryButton}" Content="Проверить обновления" Click="CheckUpdates_OnClick"/>
+                    </StackPanel>
                     <Grid Margin="0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="120"/>

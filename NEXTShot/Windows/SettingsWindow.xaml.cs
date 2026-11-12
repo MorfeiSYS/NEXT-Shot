@@ -37,7 +37,8 @@ public partial class SettingsWindow : Window
         CmbVideoQuality.SelectedIndex = Math.Clamp(_settings.VideoQuality, 0, 2);
         TxtShotPath.Text = _settings.ScreenshotsPath;
         TxtVideoPath.Text = _settings.VideoSavePath;
-        TxtVersion.Text = GetVersionText();
+        TxtHeaderAppName.Text = SkrinshoterStrings.AppName;
+        TxtHeaderVersion.Text = $"v{GetVersionText()}";
         TxtProgramId.Text = ProgramId;
 
         NavList.SelectedIndex = 0;
@@ -78,9 +79,60 @@ public partial class SettingsWindow : Window
         if (dlg.ShowDialog() == true) TxtVideoPath.Text = dlg.FolderName;
     }
 
-    private void CheckUpdates_OnClick(object sender, RoutedEventArgs e)
+    private async void CheckUpdates_OnClick(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Установлена последняя версия.", SkrinshoterStrings.AppName);
+        BtnCheckUpdates.IsEnabled = false;
+        try
+        {
+            var current = GetCurrentVersion();
+            var result = await UpdateCheckService.CheckAsync(current).ConfigureAwait(true);
+            switch (result.Status)
+            {
+                case UpdateCheckStatus.UpToDate:
+                    MessageBox.Show("Установлена последняя версия.", SkrinshoterStrings.AppName);
+                    break;
+                case UpdateCheckStatus.NewerFound:
+                {
+                    var msg = $"Доступна версия {result.LatestVersionText}.\nОткрыть страницу релиза?";
+                    if (MessageBox.Show(msg, SkrinshoterStrings.AppName, MessageBoxButton.YesNo, MessageBoxImage.Information)
+                        == MessageBoxResult.Yes)
+                    {
+                        var url = result.DownloadUrl ?? result.ReleasePageUrl;
+                        if (!string.IsNullOrEmpty(url))
+                            OpenUrl(url);
+                    }
+                    break;
+                }
+                case UpdateCheckStatus.NoReleases:
+                    MessageBox.Show("Релизы в репозитории пока не опубликованы.", SkrinshoterStrings.AppName);
+                    break;
+                case UpdateCheckStatus.Error:
+                    MessageBox.Show($"Не удалось проверить обновления:\n{result.Message}", SkrinshoterStrings.AppName);
+                    break;
+            }
+        }
+        finally
+        {
+            BtnCheckUpdates.IsEnabled = true;
+        }
+    }
+
+    private static Version GetCurrentVersion()
+    {
+        var v = Assembly.GetExecutingAssembly().GetName().Version;
+        return v is null ? new Version(1, 0, 0) : UpdateCheckService.NormalizeForCompare(v);
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch
+        {
+            MessageBox.Show("Не удалось открыть ссылку в браузере.", SkrinshoterStrings.AppName);
+        }
     }
 
     private void CopyId_OnClick(object sender, RoutedEventArgs e)

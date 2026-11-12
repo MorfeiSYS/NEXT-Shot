@@ -1,10 +1,10 @@
-; NEXTShot / Скриншотер — Windows installer (Inno Setup 6)
+; NEXT-Shot — Windows installer (Inno Setup 6)
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.27"
 #endif
 
-#define MyAppName "Скриншотер"
+#define MyAppName "NEXT-Shot"
 #define MyAppPublisher "NEXTShot"
 #define MyAppExeName "NEXTShot.exe"
 #define StagingDir "staging"
@@ -21,7 +21,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir={#OutputDir}
 OutputBaseFilename=NEXTShot-Setup-{#MyAppVersion}
-SetupIconFile=..\NEXTShot\NEXTShot\Resources\app.ico
+SetupIconFile=..\NEXTShot\Resources\app.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
