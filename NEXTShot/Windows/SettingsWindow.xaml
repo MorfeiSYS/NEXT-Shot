@@ -23,11 +23,7 @@
 
         <Border Grid.Row="0" Grid.ColumnSpan="3" Padding="16,12" BorderBrush="{StaticResource Set.Shell.BorderBrush}" BorderThickness="0,0,0,1"
                 Background="{StaticResource Set.Shell.BgBrush}">
-            <DockPanel LastChildFill="True">
-                <TextBlock x:Name="TxtHeaderAppName" DockPanel.Dock="Left" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <TextBlock x:Name="TxtHeaderVersion" DockPanel.Dock="Right" VerticalAlignment="Center"
-                           Foreground="{StaticResource Set.Shell.SubtextBrush}"/>
-            </DockPanel>
+            <TextBlock x:Name="TxtHeaderAppName" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </Border>
 
         <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource Set.Shell.SidebarBgBrush}">
@@ -144,26 +140,6 @@
                     <StackPanel Orientation="Horizontal" Margin="0,8">
                         <Button x:Name="BtnCheckUpdates" Style="{StaticResource Set.SecondaryButton}" Content="Проверить обновления" Click="CheckUpdates_OnClick"/>
                     </StackPanel>
-                    <Grid Margin="0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="ID программы:" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtProgramId" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button Grid.Column="2" Style="{StaticResource Set.SecondaryButton}" ToolTip="Копировать" Click="CopyId_OnClick">
-                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets"/>
-                        </Button>
-                    </Grid>
-                    <Grid Margin="0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Лицензия:" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="Базовая" VerticalAlignment="Center"/>
-                    </Grid>
                 </StackPanel>
             </DockPanel>
             </Grid>

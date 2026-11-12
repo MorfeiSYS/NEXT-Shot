@@ -10,8 +10,6 @@ namespace NEXTShot.Windows;
 
 public partial class SettingsWindow : Window
 {
-    public const string ProgramId = "{A7B3C4D5-E6F7-4890-ABCD-EF1234567890}";
-
     private readonly AppSettings _settings;
     private readonly Action? _onSaved;
 
@@ -38,8 +36,6 @@ public partial class SettingsWindow : Window
         TxtShotPath.Text = _settings.ScreenshotsPath;
         TxtVideoPath.Text = _settings.VideoSavePath;
         TxtHeaderAppName.Text = SkrinshoterStrings.AppName;
-        TxtHeaderVersion.Text = $"v{GetVersionText()}";
-        TxtProgramId.Text = ProgramId;
 
         NavList.SelectedIndex = 0;
         ShowPage("general");
@@ -104,7 +100,7 @@ public partial class SettingsWindow : Window
                     break;
                 }
                 case UpdateCheckStatus.NoReleases:
-                    MessageBox.Show("Релизы в репозитории пока не опубликованы.", SkrinshoterStrings.AppName);
+                    MessageBox.Show(result.Message ?? "Релизы в репозитории пока не опубликованы.", SkrinshoterStrings.AppName);
                     break;
                 case UpdateCheckStatus.Error:
                     MessageBox.Show($"Не удалось проверить обновления:\n{result.Message}", SkrinshoterStrings.AppName);
@@ -135,22 +131,7 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void CopyId_OnClick(object sender, RoutedEventArgs e)
-    {
-        Clipboard.SetText(ProgramId);
-    }
-
-    private void ReportBug_OnClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo("mailto:support@skrinshoter.ru?subject=NEXTShot%20bug") { UseShellExecute = true });
-        }
-        catch
-        {
-            MessageBox.Show("Не удалось открыть почтовый клиент.", SkrinshoterStrings.AppName);
-        }
-    }
+    private void ReportBug_OnClick(object sender, RoutedEventArgs e) => OpenUrl(UpdateCheckService.IssuesUrl);
 
     private void SaveSettings()
     {
