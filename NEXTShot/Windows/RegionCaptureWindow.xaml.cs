@@ -654,9 +654,15 @@ public partial class RegionCaptureWindow : Window
             return;
         }
 
+        PrepareRecordingSurface();
+        UpdateLayout();
+        Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
         _onVideoRecord(rect);
         if (_isVideoRecording?.Invoke() != true)
+        {
+            StopEditorRecordingUi();
             return;
+        }
 
         StartEditorRecordingUi();
     }

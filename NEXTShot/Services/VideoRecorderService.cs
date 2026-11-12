@@ -1,8 +1,5 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using NEXTShot.Native;
 
@@ -14,9 +11,6 @@ public sealed class VideoRecorderService : IDisposable
     private string? _outputPath;
     private NativeMethods.Rect? _activeRegion;
     private StringBuilder? _stderr;
-    private Thread? _captureThread;
-    private volatile bool _stopCapture;
-    private bool _pipedCapture;
 
     public bool IsRecording => _process is { HasExited: false };
     public NativeMethods.Rect? ActiveRegion => _activeRegion;
@@ -57,22 +51,9 @@ public sealed class VideoRecorderService : IDisposable
         var drawMouse = settings.CaptureCursor ? 1 : 0;
         var fullScreen = IsFullVirtualScreen(region);
         var vf = fullScreen ? BuildFullScreenVideoFilter(settings) : string.Empty;
-        _pipedCapture = !fullScreen;
-
-        var captureRegion = new NativeMethods.Rect
-        {
-            Left = region.Left,
-            Top = region.Top,
-            Right = region.Left + w,
-            Bottom = region.Top + h
-        };
-
-        var argLine = fullScreen
-            ? BuildGdigrabArgs(fps, region, w, h, drawMouse, vf, _outputPath)
-            : BuildPipedArgs(fps, w, h, _outputPath);
+        var argLine = BuildGdigrabArgs(fps, region, w, h, drawMouse, vf, _outputPath);
 
         _stderr = new StringBuilder();
-        _stopCapture = false;
         try
         {
             _process = new Process
@@ -101,16 +82,6 @@ public sealed class VideoRecorderService : IDisposable
 
             _process.BeginErrorReadLine();
 
-            if (_pipedCapture)
-            {
-                _captureThread = new Thread(() => PipedCaptureLoop(captureRegion, fps, w, h, settings.CaptureCursor))
-                {
-                    IsBackground = true,
-                    Name = "NEXTShot.VideoPipedCapture"
-                };
-                _captureThread.Start();
-            }
-
             Thread.Sleep(200);
             if (_process.HasExited)
             {
@@ -127,76 +98,12 @@ public sealed class VideoRecorderService : IDisposable
         }
     }
 
-    private void PipedCaptureLoop(NativeMethods.Rect region, int fps, int w, int h, bool includeCursor)
-    {
-        var stream = _process?.StandardInput?.BaseStream;
-        if (stream is null) return;
-
-        var frameDelay = 1000.0 / fps;
-        var sw = Stopwatch.StartNew();
-        var scheduleMs = 0.0;
-        var row = new byte[w * 4];
-
-        while (!_stopCapture && _process is { HasExited: false })
-        {
-            try
-            {
-                using var bmp = ScreenCaptureService.CaptureRect(region, includeCursor);
-                if (bmp.Width != w || bmp.Height != h)
-                {
-                    using var resized = new Bitmap(w, h, PixelFormat.Format32bppArgb);
-                    using (var g = Graphics.FromImage(resized))
-                        g.DrawImage(bmp, 0, 0, w, h);
-                    WriteBgraFrame(stream, resized, row);
-                }
-                else
-                    WriteBgraFrame(stream, bmp, row);
-            }
-            catch
-            {
-                break;
-            }
-
-            scheduleMs += frameDelay;
-            var sleep = (int)(scheduleMs - sw.Elapsed.TotalMilliseconds);
-            if (sleep > 0)
-                Thread.Sleep(sleep);
-            else if (sleep < -frameDelay * 3)
-                scheduleMs = sw.Elapsed.TotalMilliseconds;
-        }
-    }
-
-    private static void WriteBgraFrame(Stream stream, Bitmap bmp, byte[] row)
-    {
-        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
-        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        try
-        {
-            var rowBytes = bmp.Width * 4;
-            for (var y = 0; y < bmp.Height; y++)
-            {
-                Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, rowBytes);
-                stream.Write(row, 0, rowBytes);
-            }
-
-            stream.Flush();
-        }
-        finally
-        {
-            bmp.UnlockBits(data);
-        }
-    }
-
     private void FailStart()
     {
-        _stopCapture = true;
-        try { _captureThread?.Join(2000); } catch { }
-        _captureThread = null;
         try { _process?.Kill(entireProcessTree: true); } catch { }
         _process?.Dispose();
         _process = null;
         _activeRegion = null;
-        _pipedCapture = false;
         if (_outputPath is not null && File.Exists(_outputPath))
         {
             try
@@ -217,37 +124,25 @@ public sealed class VideoRecorderService : IDisposable
         {
             _process = null;
             _activeRegion = null;
-            _pipedCapture = false;
             return path;
         }
 
-        if (_pipedCapture)
+        try
         {
-            _stopCapture = true;
-            try { _captureThread?.Join(8000); } catch { }
-            _captureThread = null;
-            try { _process.StandardInput.Close(); } catch { try { _process.Kill(entireProcessTree: true); } catch { } }
+            _process.StandardInput.Write('q');
+            _process.StandardInput.WriteLine();
+            _process.StandardInput.Flush();
+            _process.StandardInput.Close();
         }
-        else
+        catch
         {
-            try
-            {
-                _process.StandardInput.Write('q');
-                _process.StandardInput.WriteLine();
-                _process.StandardInput.Flush();
-                _process.StandardInput.Close();
-            }
-            catch
-            {
-                try { _process.Kill(entireProcessTree: true); } catch { }
-            }
+            try { _process.Kill(entireProcessTree: true); } catch { }
         }
 
         _process.WaitForExit(15000);
         _process.Dispose();
         _process = null;
         _activeRegion = null;
-        _pipedCapture = false;
 
         if (path is not null && File.Exists(path) && new FileInfo(path).Length == 0)
         {
@@ -267,17 +162,6 @@ public sealed class VideoRecorderService : IDisposable
         args.Append($"-draw_mouse {drawMouse} -i desktop ");
         if (!string.IsNullOrEmpty(vf))
             args.Append(vf).Append(' ');
-        args.Append("-c:v libx264 -preset ultrafast -pix_fmt yuv420p ");
-        args.Append('"').Append(outputPath).Append('"');
-        return args.ToString();
-    }
-
-    private static string BuildPipedArgs(int fps, int w, int h, string outputPath)
-    {
-        var args = new StringBuilder();
-        args.Append("-hide_banner -loglevel error -y ");
-        args.Append($"-f rawvideo -pixel_format bgra -video_size {w}x{h} -framerate {fps} ");
-        args.Append("-i pipe:0 ");
         args.Append("-c:v libx264 -preset ultrafast -pix_fmt yuv420p ");
         args.Append('"').Append(outputPath).Append('"');
         return args.ToString();

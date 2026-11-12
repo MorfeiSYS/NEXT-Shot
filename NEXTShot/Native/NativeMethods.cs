@@ -25,8 +25,24 @@ public static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
 
+    [DllImport("user32.dll")]
+    public static extern bool GetClientRect(IntPtr hWnd, out Rect lpRect);
+
+    [DllImport("user32.dll")]
+    public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+    [DllImport("gdi32.dll")]
+    public static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+
+    [DllImport("gdi32.dll")]
+    public static extern int CombineRgn(IntPtr dest, IntPtr src1, IntPtr src2, int mode);
+
+    [DllImport("gdi32.dll")]
+    public static extern bool DeleteObject(IntPtr hObject);
+
     public const uint WdaNone = 0;
     public const uint WdaExcludeFromCapture = 0x00000011;
+    public const int RgnDiff = 4;
 
     public const int SmXVirtualScreen = 76;
     public const int SmYVirtualScreen = 77;

@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Threading;
 using NEXTShot.Native;
 using NEXTShot.Services;
 
@@ -16,10 +15,39 @@ namespace NEXTShot.Windows;
 public partial class RegionCaptureWindow
 {
     private Storyboard? _recordBlinkStoryboard;
-    private DispatcherTimer? _recordingPreviewTimer;
     private bool _editorVideoRecording;
+    private bool _recordingSurfaceOpen;
+    private Brush? _backgroundBeforeRecording;
 
     internal bool IsEditorVideoRecording => _editorVideoRecording;
+
+    internal void PrepareRecordingSurface()
+    {
+        if (_recordingSurfaceOpen) return;
+        _recordingSurfaceOpen = true;
+
+        SetOverlayExcludedFromCapture(true);
+        _backgroundBeforeRecording ??= Background;
+        Background = Brushes.Transparent;
+        CapturedPreview.Visibility = Visibility.Collapsed;
+        ShapeCanvas.Visibility = Visibility.Collapsed;
+        MarkCanvas.Visibility = Visibility.Collapsed;
+        BlurCanvas.Visibility = Visibility.Collapsed;
+        HitLayer.Visibility = Visibility.Collapsed;
+        SelectionBorder.Visibility = Visibility.Visible;
+        SelectionBorder.BorderBrush = Brushes.White;
+        RightToolbar.Visibility = Visibility.Collapsed;
+
+        CaptureHost.IsHitTestVisible = false;
+        ShapeCanvas.IsHitTestVisible = false;
+        MarkCanvas.IsHitTestVisible = false;
+        BlurCanvas.IsHitTestVisible = false;
+        HitLayer.IsHitTestVisible = false;
+
+        UpdateSelection(new WpfPoint(_selX, _selY), new WpfPoint(_selX + _selW, _selY + _selH));
+        PositionToolbars();
+        ApplyRecordingHole();
+    }
 
     internal void StartEditorRecordingUi()
     {
@@ -28,22 +56,8 @@ public partial class RegionCaptureWindow
         _showRegionHandles = false;
         SelectionChrome.Visibility = Visibility.Collapsed;
 
-        SetOverlayExcludedFromCapture(true);
-        CapturedPreview.Visibility = Visibility.Visible;
-        SelectionBorder.Visibility = Visibility.Visible;
-        SelectionBorder.BorderBrush = System.Windows.Media.Brushes.White;
-        RightToolbar.Visibility = Visibility.Collapsed;
-
+        PrepareRecordingSurface();
         UpdateSelection(new WpfPoint(_selX, _selY), new WpfPoint(_selX + _selW, _selY + _selH));
-        PositionToolbars();
-        StartRecordingPreviewTimer();
-
-        CaptureHost.IsHitTestVisible = false;
-        ShapeCanvas.IsHitTestVisible = false;
-        MarkCanvas.IsHitTestVisible = false;
-        BlurCanvas.IsHitTestVisible = false;
-        HitLayer.IsHitTestVisible = false;
-
         SetRecordingToolbarMode(true);
         StartRecordBlink();
         UpdateRecordButtonUi();
@@ -52,20 +66,25 @@ public partial class RegionCaptureWindow
     internal void StopEditorRecordingUi()
     {
         _editorVideoRecording = false;
+        _recordingSurfaceOpen = false;
 
-        StopRecordingPreviewTimer();
+        ClearRecordingHole();
         SetOverlayExcludedFromCapture(false);
+        if (_backgroundBeforeRecording is not null)
+        {
+            Background = _backgroundBeforeRecording;
+            _backgroundBeforeRecording = null;
+        }
 
         SelectionBorder.Visibility = Visibility.Visible;
+        HitLayer.Visibility = Visibility.Visible;
+        ShapeCanvas.Visibility = Visibility.Visible;
+        BlurCanvas.Visibility = Visibility.Visible;
         CaptureHost.IsHitTestVisible = true;
         ShapeCanvas.IsHitTestVisible = true;
         HitLayer.IsHitTestVisible = true;
         UpdateMarkCanvasVisibility();
-
-        if (_capturedBitmap is not null)
-        {
-            CapturedPreview.Visibility = Visibility.Visible;
-        }
+        RestoreCapturedPreview();
 
         UpdateSelection(new WpfPoint(_selX, _selY), new WpfPoint(_selX + _selW, _selY + _selH));
         _showRegionHandles = true;
@@ -74,6 +93,56 @@ public partial class RegionCaptureWindow
         SetRecordingToolbarMode(false);
         StopRecordBlink();
         UpdateRecordButtonUi();
+    }
+
+    private void RestoreCapturedPreview()
+    {
+        if (_capturedBitmap is null)
+        {
+            CapturedPreview.Source = null;
+            CapturedPreview.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var source = ScreenCaptureService.ToBitmapSource(_capturedBitmap);
+        source.Freeze();
+        CapturedPreview.Source = source;
+        CapturedPreview.Visibility = Visibility.Visible;
+    }
+
+    private void ApplyRecordingHole()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        if (!NativeMethods.GetClientRect(hwnd, out var client) || client.Width <= 0 || client.Height <= 0)
+            return;
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var x = (int)Math.Round(_selX * dpi.DpiScaleX);
+        var y = (int)Math.Round(_selY * dpi.DpiScaleY);
+        var w = Math.Max(1, (int)Math.Round(_selW * dpi.DpiScaleX));
+        var h = Math.Max(1, (int)Math.Round(_selH * dpi.DpiScaleY));
+        x = Math.Clamp(x, 0, client.Width);
+        y = Math.Clamp(y, 0, client.Height);
+        w = Math.Min(w, client.Width - x);
+        h = Math.Min(h, client.Height - y);
+        if (w <= 0 || h <= 0) return;
+
+        var full = NativeMethods.CreateRectRgn(0, 0, client.Width, client.Height);
+        var hole = NativeMethods.CreateRectRgn(x, y, x + w, y + h);
+        var diff = NativeMethods.CreateRectRgn(0, 0, 1, 1);
+        var combined = NativeMethods.CombineRgn(diff, full, hole, NativeMethods.RgnDiff);
+        NativeMethods.DeleteObject(full);
+        NativeMethods.DeleteObject(hole);
+        if (combined == 0 || NativeMethods.SetWindowRgn(hwnd, diff, true) == 0)
+            NativeMethods.DeleteObject(diff);
+    }
+
+    private void ClearRecordingHole()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        _ = NativeMethods.SetWindowRgn(hwnd, IntPtr.Zero, true);
     }
 
     private void SetRecordingToolbarMode(bool recording)
@@ -126,42 +195,6 @@ public partial class RegionCaptureWindow
         if (hwnd == IntPtr.Zero) return;
         _ = NativeMethods.SetWindowDisplayAffinity(hwnd,
             exclude ? NativeMethods.WdaExcludeFromCapture : NativeMethods.WdaNone);
-    }
-
-    private void StartRecordingPreviewTimer()
-    {
-        StopRecordingPreviewTimer();
-        _recordingPreviewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _recordingPreviewTimer.Tick += OnRecordingPreviewTick;
-        _recordingPreviewTimer.Start();
-        UpdateRecordingAreaPreview();
-    }
-
-    private void StopRecordingPreviewTimer()
-    {
-        if (_recordingPreviewTimer is null) return;
-        _recordingPreviewTimer.Stop();
-        _recordingPreviewTimer = null;
-    }
-
-    private void OnRecordingPreviewTick(object? sender, EventArgs e) => UpdateRecordingAreaPreview();
-
-    private void UpdateRecordingAreaPreview()
-    {
-        if (!_editorVideoRecording || _selW < 5 || _selH < 5) return;
-        try
-        {
-            var screen = ToPhysicalRect(_selX, _selY, _selW, _selH);
-            var captureCursor = _settings?.CaptureCursor ?? false;
-            using var crop = ScreenCaptureService.CaptureRect(screen, captureCursor);
-            var source = ScreenCaptureService.ToBitmapSource(crop);
-            source.Freeze();
-            CapturedPreview.Source = source;
-        }
-        catch
-        {
-            // ignore preview errors
-        }
     }
 
 }
