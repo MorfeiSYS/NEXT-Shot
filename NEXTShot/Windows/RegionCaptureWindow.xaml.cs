@@ -370,8 +370,6 @@ public partial class RegionCaptureWindow : Window
         var (rx, ry) = PlaceOutsideCapture(
             _selX + _selW + gap, _selY, rightW, rightH, capture, cw, ch, margin,
             preferRight: true, preferBelow: false);
-        Canvas.SetLeft(RightToolbar, rx);
-        Canvas.SetTop(RightToolbar, ry);
 
         BottomToolbar.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
         var bottomW = Math.Max(BottomToolbar.DesiredSize.Width, BottomToolbar.ActualWidth);
@@ -384,8 +382,59 @@ public partial class RegionCaptureWindow : Window
         var (bottomX, bottomY) = PlaceOutsideCapture(
             bx, by, bottomW, bottomH, capture, cw, ch, margin,
             preferRight: false, preferBelow: true);
+
+        ResolveToolbarOverlap(
+            ref rx, ref ry, rightW, rightH,
+            ref bottomX, ref bottomY, bottomW, bottomH,
+            gap, margin, cw, ch);
+
+        Canvas.SetLeft(RightToolbar, rx);
+        Canvas.SetTop(RightToolbar, ry);
         Canvas.SetLeft(BottomToolbar, bottomX);
         Canvas.SetTop(BottomToolbar, bottomY);
+    }
+
+    private static void ResolveToolbarOverlap(
+        ref double rx, ref double ry, double rightW, double rightH,
+        ref double bx, ref double by, double bottomW, double bottomH,
+        double gap, double margin, double cw, double ch)
+    {
+        static bool Overlap(double x1, double y1, double w1, double h1, double x2, double y2, double w2, double h2) =>
+            new Rect(x1, y1, w1, h1).IntersectsWith(new Rect(x2, y2, w2, h2));
+
+        static void Clamp(ref double px, ref double py, double w, double h, double cw, double ch, double margin)
+        {
+            px = Math.Clamp(px, margin, Math.Max(margin, cw - w - margin));
+            py = Math.Clamp(py, margin, Math.Max(margin, ch - h - margin));
+        }
+
+        if (!Overlap(rx, ry, rightW, rightH, bx, by, bottomW, bottomH))
+            return;
+
+        var maxBottomRight = rx - gap;
+        if (bx + bottomW > maxBottomRight)
+            bx = maxBottomRight - bottomW;
+        Clamp(ref bx, ref by, bottomW, bottomH, cw, ch, margin);
+
+        if (!Overlap(rx, ry, rightW, rightH, bx, by, bottomW, bottomH))
+            return;
+
+        var minBottomLeft = rx + rightW + gap;
+        if (bx + bottomW > rx - gap && bx < minBottomLeft)
+            bx = minBottomLeft;
+        Clamp(ref bx, ref by, bottomW, bottomH, cw, ch, margin);
+
+        if (!Overlap(rx, ry, rightW, rightH, bx, by, bottomW, bottomH))
+            return;
+
+        ry = by + bottomH + gap;
+        Clamp(ref rx, ref ry, rightW, rightH, cw, ch, margin);
+
+        if (!Overlap(rx, ry, rightW, rightH, bx, by, bottomW, bottomH))
+            return;
+
+        by = ry + rightH + gap;
+        Clamp(ref bx, ref by, bottomW, bottomH, cw, ch, margin);
     }
 
     private static (double x, double y) PlaceOutsideCapture(
