@@ -29,6 +29,7 @@ public partial class RegionCaptureWindow
         SetOverlayExcludedFromCapture(true);
         _backgroundBeforeRecording ??= Background;
         Background = Brushes.Transparent;
+        FrozenDesktop.Visibility = Visibility.Collapsed;
         CapturedPreview.Visibility = Visibility.Collapsed;
         ShapeCanvas.Visibility = Visibility.Collapsed;
         MarkCanvas.Visibility = Visibility.Collapsed;
@@ -85,6 +86,8 @@ public partial class RegionCaptureWindow
         HitLayer.IsHitTestVisible = true;
         UpdateMarkCanvasVisibility();
         RestoreCapturedPreview();
+        if (_editing)
+            ShowFrozenDesktopBackground();
 
         UpdateSelection(new WpfPoint(_selX, _selY), new WpfPoint(_selX + _selW, _selY + _selH));
         _showRegionHandles = true;
@@ -186,6 +189,8 @@ public partial class RegionCaptureWindow
     protected override void OnClosed(EventArgs e)
     {
         StopEditorRecordingUi();
+        _desktopSnapshot?.Dispose();
+        _desktopSnapshot = null;
         base.OnClosed(e);
     }
 

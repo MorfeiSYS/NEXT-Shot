@@ -82,6 +82,7 @@
         </ContextMenu>
     </Window.Resources>
     <Canvas x:Name="OverlayCanvas">
+        <Image x:Name="FrozenDesktop" Stretch="Fill" Visibility="Collapsed" IsHitTestVisible="False"/>
         <Rectangle x:Name="HitLayer" Fill="#01000000" IsHitTestVisible="True"/>
         <Rectangle x:Name="ShadeTop" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
         <Rectangle x:Name="ShadeLeft" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>

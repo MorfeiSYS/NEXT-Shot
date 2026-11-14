@@ -21,7 +21,7 @@ if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
 New-Item -ItemType Directory -Force -Path $staging, $outDir | Out-Null
 
 Write-Host "Publishing to $staging ..."
-dotnet publish $proj -c Release -r win-x64 --self-contained false -o $staging
+dotnet publish $proj -c Release -r win-x64 --self-contained true -o $staging
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 
 Write-Host "Compiling installer ..."

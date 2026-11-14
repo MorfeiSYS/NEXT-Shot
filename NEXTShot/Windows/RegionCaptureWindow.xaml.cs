@@ -29,6 +29,7 @@ public partial class RegionCaptureWindow : Window
     private DrawingBitmap? _capturedBitmap;
     private string _savePath = "";
     private DrawingBitmap? _pendingBitmap;
+    private DrawingBitmap? _pendingFrozenDesktop;
     private NativeMethods.Rect? _pendingScreenRect;
 
     public NativeMethods.Rect? SelectedRect { get; private set; }
@@ -46,6 +47,41 @@ public partial class RegionCaptureWindow : Window
         InitSelectionChrome();
         InitCaptureToolbarIcons();
         ApplyScreenBounds();
+        if (!_videoSelectionOnly)
+        {
+            Opacity = 0;
+            Loaded += OnLoadedCaptureFrozenDesktop;
+        }
+    }
+
+    private void OnLoadedCaptureFrozenDesktop(object? sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoadedCaptureFrozenDesktop;
+        if (_pendingBitmap is not null)
+        {
+            Opacity = 1;
+            return;
+        }
+
+        try
+        {
+            if (_pendingFrozenDesktop is not null)
+                ApplyFrozenDesktopSnapshot(_pendingFrozenDesktop);
+            else
+                CaptureFrozenDesktopSnapshot();
+            ShowFrozenDesktopBackground();
+            Opacity = 1;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Скриншот: {ex.Message}", SkrinshoterStrings.AppName);
+            Close();
+        }
+    }
+
+    public void StartWithFrozenDesktop(DrawingBitmap desktopSnapshot)
+    {
+        _pendingFrozenDesktop = desktopSnapshot ?? throw new ArgumentNullException(nameof(desktopSnapshot));
     }
 
     public void StartWithExistingCapture(DrawingBitmap bitmap, NativeMethods.Rect screenRect)
@@ -221,17 +257,22 @@ public partial class RegionCaptureWindow : Window
         var frameW = _selW;
         var frameH = _selH;
 
-        HideWindowForScreenGrab();
         DrawingBitmap captured;
-        try
+        if (_desktopSnapshot is not null)
+            captured = CropDesktopSnapshot(screen);
+        else
         {
-            var captureCursor = _settings?.CaptureCursor ?? true;
-            using var bmp = ScreenCaptureService.CaptureRect(screen, captureCursor);
-            captured = (DrawingBitmap)bmp.Clone();
-        }
-        finally
-        {
-            ShowWindowAfterScreenGrab();
+            HideWindowForScreenGrab();
+            try
+            {
+                var captureCursor = _settings?.CaptureCursor ?? true;
+                using var bmp = ScreenCaptureService.CaptureRect(screen, captureCursor);
+                captured = (DrawingBitmap)bmp.Clone();
+            }
+            finally
+            {
+                ShowWindowAfterScreenGrab();
+            }
         }
 
         ApplyCapturedBitmap(captured, frameX, frameY, frameW, frameH);
