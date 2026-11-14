@@ -8,13 +8,20 @@ installer/output/
 *.suo
 .vs/
 
-# Publish / artifacts
+# Publish / artifacts (не на GitHub)
+release/
+publish/
+dist/
 *.pdb
 *.mp4
 *.zip
+*.msi
 
-# ffmpeg (downloaded by _tools/FetchFfmpeg.ps1)
-**/ffmpeg/ffmpeg.exe
+# Executables (build outputs, installers) — в репо не нужны
+*.exe
+
+# Но: ffmpeg, скачанный _tools/FetchFfmpeg.ps1, храним через Git LFS
+!NEXTShot/ffmpeg/ffmpeg.exe
 
 # OS / IDE
 Thumbs.db
@@ -30,4 +37,3 @@ Desktop.ini
 *.pfx
 *.key
 credentials*.json
-

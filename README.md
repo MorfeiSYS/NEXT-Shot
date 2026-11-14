@@ -4,9 +4,8 @@ WPF-приложение для Windows: скриншоты области/ок�
 
 ## Требования
 
-- Windows 10/11 x64
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) — для сборки
-- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) — для запуска опубликованной сборки
+- Windows 10/11 x64 — для установки из `NEXTShot-Setup-*.exe` (в комплекте .NET Desktop Runtime, отдельно ставить не нужно)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) — только для разработки и локальной сборки
 - [Inno Setup 6](https://jrsoftware.org/isinfo.php) — только для сборки инсталлятора
 
 ## Сборка
@@ -23,7 +22,7 @@ dotnet build NEXTShot\NEXTShot.csproj -c Release
 powershell -NoProfile -ExecutionPolicy Bypass -File .\_tools\BuildInstaller.ps1
 ```
 
-Результат: `installer/output/NEXTShot-Setup-<версия>.exe`.
+Результат: `installer/output/NEXTShot-Setup-<версия>.exe` (self-contained win-x64).
 
 ## Структура
 

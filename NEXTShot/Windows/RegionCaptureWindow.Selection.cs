@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using NEXTShot.Native;
 using NEXTShot.Resources;
 using NEXTShot.Services;
 using WpfPoint = System.Windows.Point;
@@ -155,17 +156,25 @@ public partial class RegionCaptureWindow
         var screen = ToPhysicalRect(_selX, _selY, _selW, _selH);
         SelectedRect = screen;
 
-        HideWindowForScreenGrab();
-        try
+        if (_desktopSnapshot is not null)
         {
-            var captureCursor = _settings?.CaptureCursor ?? true;
-            using var bmp = ScreenCaptureService.CaptureRect(screen, captureCursor);
             _capturedBitmap?.Dispose();
-            _capturedBitmap = new System.Drawing.Bitmap(bmp);
+            _capturedBitmap = CropDesktopSnapshot(screen);
         }
-        finally
+        else
         {
-            ShowWindowAfterScreenGrab();
+            HideWindowForScreenGrab();
+            try
+            {
+                var captureCursor = _settings?.CaptureCursor ?? true;
+                using var bmp = ScreenCaptureService.CaptureRect(screen, captureCursor);
+                _capturedBitmap?.Dispose();
+                _capturedBitmap = new DrawingBitmap(bmp);
+            }
+            finally
+            {
+                ShowWindowAfterScreenGrab();
+            }
         }
 
         var source = ScreenCaptureService.ToBitmapSource(_capturedBitmap);
@@ -183,8 +192,6 @@ public partial class RegionCaptureWindow
 
     private void BeginAdjustMove(WpfPoint pos)
     {
-        if (_editing)
-            RefreshDesktopSnapshot();
         _selInteraction = SelInteraction.Moving;
         _dragOrigin = pos;
         _anchorSelX = _selX;
@@ -196,8 +203,6 @@ public partial class RegionCaptureWindow
 
     private void BeginAdjustResize(WpfPoint pos, int handle)
     {
-        if (_editing)
-            RefreshDesktopSnapshot();
         _selInteraction = SelInteraction.Resizing;
         _activeHandle = handle;
         _dragOrigin = pos;
@@ -208,13 +213,20 @@ public partial class RegionCaptureWindow
         CaptureMouse();
     }
 
-    private void RefreshDesktopSnapshot()
+    private void ApplyFrozenDesktopSnapshot(DrawingBitmap desktopSnapshot)
+    {
+        _desktopSnapshot?.Dispose();
+        _desktopSnapshot = desktopSnapshot;
+        _pendingFrozenDesktop = null;
+    }
+
+    private void CaptureFrozenDesktopSnapshot()
     {
         HideWindowForScreenGrab();
         try
         {
             _desktopSnapshot?.Dispose();
-            var captureCursor = _settings?.CaptureCursor ?? false;
+            var captureCursor = _settings?.CaptureCursor ?? true;
             using var bmp = ScreenCaptureService.CaptureVirtualScreen(captureCursor);
             _desktopSnapshot = new DrawingBitmap(bmp);
         }
@@ -222,6 +234,36 @@ public partial class RegionCaptureWindow
         {
             ShowWindowAfterScreenGrab();
         }
+    }
+
+    private void ShowFrozenDesktopBackground()
+    {
+        if (_desktopSnapshot is null) return;
+
+        var source = ScreenCaptureService.ToBitmapSource(_desktopSnapshot);
+        source.Freeze();
+        FrozenDesktop.Source = source;
+        FrozenDesktop.Width = OverlayCanvas.Width > 0 ? OverlayCanvas.Width : Width;
+        FrozenDesktop.Height = OverlayCanvas.Height > 0 ? OverlayCanvas.Height : Height;
+        Canvas.SetLeft(FrozenDesktop, 0);
+        Canvas.SetTop(FrozenDesktop, 0);
+        FrozenDesktop.Visibility = Visibility.Visible;
+    }
+
+    private DrawingBitmap CropDesktopSnapshot(NativeMethods.Rect screen)
+    {
+        if (_desktopSnapshot is null)
+            throw new InvalidOperationException();
+
+        var vs = ScreenCaptureService.GetVirtualScreenRect();
+        var cx = screen.Left - vs.Left;
+        var cy = screen.Top - vs.Top;
+        var cw = screen.Width;
+        var ch = screen.Height;
+        if (cx < 0 || cy < 0 || cx + cw > _desktopSnapshot.Width || cy + ch > _desktopSnapshot.Height)
+            throw new ArgumentOutOfRangeException(nameof(screen), "Область выходит за пределы снимка экрана.");
+
+        return _desktopSnapshot.Clone(new Rectangle(cx, cy, cw, ch), _desktopSnapshot.PixelFormat);
     }
 
     private void UpdateLivePreviewFromSnapshot()

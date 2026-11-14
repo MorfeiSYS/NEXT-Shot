@@ -1,4 +1,5 @@
 using System.IO;
+using DrawingBitmap = System.Drawing.Bitmap;
 using System.Media;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,6 +19,8 @@ public partial class App : Application
     private TaskbarIcon? _tray;
     private VideoControlPanelWindow? _videoPanel;
     private SingleInstanceService? _singleInstance;
+    private RegionCapturePrimingHook? _regionPriming;
+    private long _lastRegionCaptureTick;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -39,12 +42,14 @@ public partial class App : Application
         AutostartService.CleanupDuplicates();
         _hotkeys = new HotkeyService();
         _video = new VideoRecorderService();
+        _regionPriming = new RegionCapturePrimingHook();
         _tray = (TaskbarIcon)FindResource("TrayIcon");
-        _hotkeys.RegionCaptureRequested += () => Dispatcher.BeginInvoke(CaptureRegion);
+        _hotkeys.RegionCaptureRequested += () => Dispatcher.BeginInvoke(RequestRegionCapture);
         _hotkeys.WindowCaptureRequested += () => Dispatcher.BeginInvoke(CaptureWindow);
         _hotkeys.FullScreenCaptureRequested += () => Dispatcher.BeginInvoke(CaptureFull);
         _hotkeys.VideoToggleRequested += () => Dispatcher.BeginInvoke(ToggleVideo);
         _hotkeys.RegisterFromSettings(_settings);
+        ConfigureRegionPrimingHook();
         if (!_hotkeys.RegionHotkeyRegistered)
         {
             _tray?.ShowBalloonTip(SkrinshoterStrings.AppName,
@@ -58,13 +63,14 @@ public partial class App : Application
     {
         CloseVideoPanel();
         _hotkeys.Dispose();
+        _regionPriming?.Dispose();
         _video.Dispose();
         _tray?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);
     }
 
-    private void CaptureRegion_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(CaptureRegion);
+    private void CaptureRegion_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(RequestRegionCapture);
     private void CaptureWindow_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(CaptureWindow);
     private void CaptureFull_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(CaptureFull);
     private void ToggleVideo_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(ToggleVideo);
@@ -82,17 +88,51 @@ public partial class App : Application
     }
     private void Exit_OnClick(object sender, RoutedEventArgs e) => Shutdown();
 
-    private void ReloadHotkeys() => _hotkeys.RegisterFromSettings(_settings);
+    private void ReloadHotkeys()
+    {
+        _hotkeys.RegisterFromSettings(_settings);
+        ConfigureRegionPrimingHook();
+    }
+
+    private void ConfigureRegionPrimingHook()
+    {
+        _regionPriming ??= new RegionCapturePrimingHook();
+        _regionPriming.Configure(_settings, _hotkeys.RegionHotkeyRegistered, () => _settings.CaptureCursor,
+            () => Dispatcher.BeginInvoke(RequestRegionCapture));
+    }
+
+    private void RequestRegionCapture()
+    {
+        var now = Environment.TickCount64;
+        if (now - _lastRegionCaptureTick < 400) return;
+        _lastRegionCaptureTick = now;
+        CaptureRegion();
+    }
 
     private void CaptureRegion()
     {
+        DrawingBitmap? desktop = null;
         try
         {
-            new RegionCaptureWindow(_settings, false, ToggleRecordingFromEditor, () => _video.IsRecording).ShowDialog();
+            desktop = _regionPriming?.TakePendingFrame();
+            if (desktop is null)
+            {
+                using var bmp = ScreenCaptureService.CaptureVirtualScreen(_settings.CaptureCursor);
+                desktop = (DrawingBitmap)bmp.Clone();
+            }
+
+            var overlay = new RegionCaptureWindow(_settings, false, ToggleRecordingFromEditor, () => _video.IsRecording);
+            overlay.StartWithFrozenDesktop(desktop);
+            desktop = null;
+            overlay.ShowDialog();
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Скриншот области: {ex.Message}", SkrinshoterStrings.AppName);
+        }
+        finally
+        {
+            desktop?.Dispose();
         }
     }
 
