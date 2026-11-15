@@ -16,6 +16,7 @@ public partial class App : Application
     private AppSettings _settings = null!;
     private HotkeyService _hotkeys = null!;
     private VideoRecorderService _video = null!;
+    private MouseClickHighlightService _mouseClicks = null!;
     private TaskbarIcon? _tray;
     private VideoControlPanelWindow? _videoPanel;
     private SingleInstanceService? _singleInstance;
@@ -42,6 +43,7 @@ public partial class App : Application
         AutostartService.CleanupDuplicates();
         _hotkeys = new HotkeyService();
         _video = new VideoRecorderService();
+        _mouseClicks = new MouseClickHighlightService();
         _regionPriming = new RegionCapturePrimingHook();
         _tray = (TaskbarIcon)FindResource("TrayIcon");
         _hotkeys.RegionCaptureRequested += () => Dispatcher.BeginInvoke(RequestRegionCapture);
@@ -64,6 +66,7 @@ public partial class App : Application
         CloseVideoPanel();
         _hotkeys.Dispose();
         _regionPriming?.Dispose();
+        _mouseClicks.Dispose();
         _video.Dispose();
         _tray?.Dispose();
         _singleInstance?.Dispose();
@@ -140,6 +143,7 @@ public partial class App : Application
     {
         if (_video.IsRecording)
         {
+            _mouseClicks.Stop();
             if (_video.Stop() is { } path)
                 _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, $"Запись сохранена:\n{path}", BalloonIcon.Info);
             CloseVideoPanel();
@@ -162,7 +166,10 @@ public partial class App : Application
             }
 
             using var bmp = ScreenCaptureService.CaptureRect(rect.Value, _settings.CaptureCursor);
-            OpenInRegionEditor(bmp, rect.Value);
+            if (_settings.AlwaysShowEditor)
+                OpenInRegionEditor(bmp, rect.Value);
+            else
+                NotifyScreenshotSaved(ScreenCaptureService.SaveScreenshotDirect(bmp, _settings));
         }
         catch (Exception ex)
         {
@@ -176,13 +183,16 @@ public partial class App : Application
         {
             var rect = ScreenCaptureService.GetVirtualScreenRect();
             using var bmp = ScreenCaptureService.CaptureRect(rect, _settings.CaptureCursor);
-            OpenInRegionEditor(bmp, rect);
+            NotifyScreenshotSaved(ScreenCaptureService.SaveScreenshotDirect(bmp, _settings));
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Скриншот экрана: {ex.Message}", SkrinshoterStrings.AppName);
         }
     }
+
+    private void NotifyScreenshotSaved(string path) =>
+        _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, $"Скриншот сохранён:\n{path}", BalloonIcon.Info);
 
     private void OpenInRegionEditor(System.Drawing.Bitmap bitmap, NativeMethods.Rect screenRect)
     {
@@ -196,6 +206,7 @@ public partial class App : Application
     {
         if (_video.IsRecording)
         {
+            _mouseClicks.Stop();
             var path = _video.Stop();
             CloseVideoPanel();
             UpdateVideoMenuItem();
@@ -233,6 +244,7 @@ public partial class App : Application
         }
 
         _videoPanel?.SetRecording(true);
+        _mouseClicks.Start(_settings, region);
         UpdateVideoMenuItem();
         _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, "Запись начата", BalloonIcon.Info);
     }

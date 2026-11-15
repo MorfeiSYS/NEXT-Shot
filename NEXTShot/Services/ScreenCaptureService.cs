@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Media;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -91,6 +92,24 @@ public static class ScreenCaptureService
             bitmap.Save(path, codec, ep);
         }
         else bitmap.Save(path, ImageFormat.Png);
+    }
+
+    public static string BuildScreenshotPath(AppSettings settings)
+    {
+        var ext = settings.ScreenshotFileType == 1 ? "jpg" : "png";
+        return Path.Combine(settings.ScreenshotsPath, $"Скриншот {DateTime.Now:yyyy-MM-dd HH-mm-ss}.{ext}");
+    }
+
+    public static string SaveScreenshotDirect(Bitmap bitmap, AppSettings settings)
+    {
+        var path = BuildScreenshotPath(settings);
+        SaveBitmap(bitmap, path, settings.JpegQuality, settings.ScreenshotFileType == 1);
+        if (settings.PlaySound)
+        {
+            try { SystemSounds.Asterisk.Play(); }
+            catch { }
+        }
+        return path;
     }
 
     [DllImport("user32.dll")] private static extern bool GetCursorInfo(ref CursorInfo pci);

@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Runtime.InteropServices;
 
 namespace NEXTShot.Native;
@@ -8,6 +9,15 @@ public static class NativeMethods
     public const int WmKeyDown = 0x0100;
     public const int WmSysKeyDown = 0x0104;
     public const int WhKeyboardLl = 13;
+    public const int WhMouseLl = 14;
+    public const int WmLButtonDown = 0x0201;
+    public const int WmRButtonDown = 0x0204;
+    public const int WmMButtonDown = 0x0207;
+    public const int GwlExstyle = -20;
+    public const int WsExTransparent = 0x00000020;
+    public const int WsExLayered = 0x00080000;
+    public const int WsExToolwindow = 0x00000080;
+    public const int WsExNoactivate = 0x08000000;
     public const int VkSnapshot = 0x2C;
     public const int VkShift = 0x10;
     public const int VkControl = 0x11;
@@ -17,9 +27,19 @@ public static class NativeMethods
     public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
     public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+    public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -39,6 +59,16 @@ public static class NativeMethods
     {
         public uint VkCode;
         public uint ScanCode;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MsLlHookStruct
+    {
+        public System.Drawing.Point Pt;
+        public uint MouseData;
         public uint Flags;
         public uint Time;
         public IntPtr ExtraInfo;
