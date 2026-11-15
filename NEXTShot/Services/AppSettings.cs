@@ -6,7 +6,7 @@ namespace NEXTShot.Services;
 
 public sealed class AppSettings
 {
-    public bool AutostartOn { get; set; }
+    public bool AutostartOn { get; set; } = true;
     public bool CaptureCursor { get; set; } = true;
     public bool PlaySound { get; set; } = true;
     public bool SilentMode { get; set; } = true;
@@ -45,11 +45,20 @@ public sealed class AppSettings
         }
         catch { }
 
+        var firstRun = loaded is null;
         var d = loaded ?? new AppSettings();
-        d.AutostartOn = AutostartService.IsEnabled();
+        if (firstRun)
+        {
+            AutostartService.Apply(d.AutostartOn);
+        }
+        else
+        {
+            d.AutostartOn = AutostartService.IsEnabled();
+        }
+
         if (string.IsNullOrWhiteSpace(d.VideoSavePath))
             d.VideoSavePath = d.ScreenshotsPath;
-        if (loaded is null)
+        if (firstRun)
             d.Save();
         return d;
     }
