@@ -103,7 +103,7 @@
                     <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Set.SecondaryButton}" Content="Обзор" Click="BrowseShotPath_OnClick"/>
                 </Grid>
                 <CheckBox x:Name="ChkPlaySound" Content="Проигрывать звук" Margin="0,12,0,0"/>
-                <CheckBox x:Name="ChkAlwaysEditor" Content="Всегда активировать редактор" Margin="0,6"/>
+                <CheckBox x:Name="ChkAlwaysEditor" Content="Открывать редактор после снимка активного окна" Margin="0,6"/>
             </StackPanel>
 
             <StackPanel x:Name="PageVideo" Visibility="Collapsed">
