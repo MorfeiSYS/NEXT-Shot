@@ -6,7 +6,7 @@ namespace NEXTShot.Services;
 
 public sealed class AppSettings
 {
-    public bool AutostartOn { get; set; }
+    public bool AutostartOn { get; set; } = true;
     public bool CaptureCursor { get; set; } = true;
     public bool PlaySound { get; set; } = true;
     public bool SilentMode { get; set; } = true;
@@ -17,8 +17,11 @@ public sealed class AppSettings
     public string VideoSavePath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
     public int JpegQuality { get; set; } = 90;
     public int ScreenshotFileType { get; set; } = 1;
+    /// <summary>Макс. одновременных оверлеев «снимок в снимке» (1–7).</summary>
+    public int MaxNestedRegionCaptures { get; set; } = 1;
     public int VideoQuality { get; set; } = 0;
     public bool ShowVideoControlPanel { get; set; } = true;
+    public bool VideoControlPanelUseIcons { get; set; } = false;
     public bool StartRecordingAfterSelection { get; set; } = false;
 
     public string HotkeyRegionScreenshot { get; set; } = "44";
@@ -45,11 +48,14 @@ public sealed class AppSettings
         }
         catch { }
 
+        var firstRun = loaded is null;
         var d = loaded ?? new AppSettings();
-        d.AutostartOn = AutostartService.IsEnabled();
+        if (firstRun)
+            AutostartService.Apply(d.AutostartOn);
+
         if (string.IsNullOrWhiteSpace(d.VideoSavePath))
             d.VideoSavePath = d.ScreenshotsPath;
-        if (loaded is null)
+        if (firstRun)
             d.Save();
         return d;
     }

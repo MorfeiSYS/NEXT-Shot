@@ -22,7 +22,7 @@ public partial class SettingsWindow : Window
         Foreground = (System.Windows.Media.Brush)FindResource("Set.Shell.TextBrush");
         Title = $"{SkrinshoterStrings.AppName} {GetVersionText()}";
 
-        ChkAutostart.IsChecked = AutostartService.IsEnabled();
+        ChkAutostart.IsChecked = _settings.AutostartOn;
         ChkSilent.IsChecked = _settings.SilentMode;
         ChkUpdates.IsChecked = _settings.CheckForUpdates;
         ChkPlaySound.IsChecked = _settings.PlaySound;
@@ -30,8 +30,10 @@ public partial class SettingsWindow : Window
         ChkVideoCursor.IsChecked = _settings.CaptureCursor;
         ChkVideoClicks.IsChecked = _settings.HighlightMouseClicks;
         ChkVideoControlPanel.IsChecked = _settings.ShowVideoControlPanel;
+        ChkVideoPanelIcons.IsChecked = _settings.VideoControlPanelUseIcons;
         ChkVideoStartImmediate.IsChecked = _settings.StartRecordingAfterSelection;
         CmbFormat.SelectedIndex = Math.Clamp(_settings.ScreenshotFileType, 0, 1);
+        CmbMaxNestedCaptures.SelectedIndex = Math.Clamp(_settings.MaxNestedRegionCaptures, 1, 7) - 1;
         CmbVideoQuality.SelectedIndex = Math.Clamp(_settings.VideoQuality, 0, 2);
         TxtShotPath.Text = _settings.ScreenshotsPath;
         TxtVideoPath.Text = _settings.VideoSavePath;
@@ -143,8 +145,10 @@ public partial class SettingsWindow : Window
         _settings.CaptureCursor = ChkVideoCursor.IsChecked == true;
         _settings.HighlightMouseClicks = ChkVideoClicks.IsChecked == true;
         _settings.ShowVideoControlPanel = ChkVideoControlPanel.IsChecked == true;
+        _settings.VideoControlPanelUseIcons = ChkVideoPanelIcons.IsChecked == true;
         _settings.StartRecordingAfterSelection = ChkVideoStartImmediate.IsChecked == true;
         _settings.ScreenshotFileType = CmbFormat.SelectedIndex;
+        _settings.MaxNestedRegionCaptures = Math.Clamp(CmbMaxNestedCaptures.SelectedIndex + 1, 1, 7);
         _settings.VideoQuality = Math.Clamp(CmbVideoQuality.SelectedIndex, 0, 2);
         _settings.ScreenshotsPath = TxtShotPath.Text.Trim();
         _settings.VideoSavePath = TxtVideoPath.Text.Trim();

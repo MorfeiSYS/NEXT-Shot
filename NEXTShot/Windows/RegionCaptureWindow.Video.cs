@@ -5,6 +5,8 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using NEXTShot.Helpers;
 using NEXTShot.Native;
 using NEXTShot.Services;
 
@@ -15,6 +17,8 @@ namespace NEXTShot.Windows;
 public partial class RegionCaptureWindow
 {
     private Storyboard? _recordBlinkStoryboard;
+    private Storyboard? _pauseBlinkStoryboard;
+    private DispatcherTimer? _recordDurationTimer;
     private bool _editorVideoRecording;
     private bool _recordingSurfaceOpen;
     private Brush? _backgroundBeforeRecording;
@@ -61,7 +65,11 @@ public partial class RegionCaptureWindow
         UpdateSelection(new WpfPoint(_selX, _selY), new WpfPoint(_selX + _selW, _selY + _selH));
         SetRecordingToolbarMode(true);
         StartRecordBlink();
+        StartRecordDurationTimer();
+        TxtRecordDuration.Visibility = Visibility.Visible;
         UpdateRecordButtonUi();
+        PositionToolbars();
+        RefreshRecordDurationText();
     }
 
     internal void StopEditorRecordingUi()
@@ -95,7 +103,32 @@ public partial class RegionCaptureWindow
         RightToolbar.Visibility = Visibility.Visible;
         SetRecordingToolbarMode(false);
         StopRecordBlink();
+        StopRecordDurationTimer();
+        StopPauseButtonBlink();
+        TxtRecordDuration.Visibility = Visibility.Collapsed;
         UpdateRecordButtonUi();
+    }
+
+    internal void RefreshRecordDurationText()
+    {
+        if (_getRecordedDuration is null)
+            return;
+        TxtRecordDuration.Text = VideoControlContent.FormatDuration(_getRecordedDuration());
+    }
+
+    private void StartRecordDurationTimer()
+    {
+        StopRecordDurationTimer();
+        _recordDurationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _recordDurationTimer.Tick += (_, _) => RefreshRecordDurationText();
+        _recordDurationTimer.Start();
+    }
+
+    private void StopRecordDurationTimer()
+    {
+        if (_recordDurationTimer is null) return;
+        _recordDurationTimer.Stop();
+        _recordDurationTimer = null;
     }
 
     private void RestoreCapturedPreview()
@@ -153,18 +186,23 @@ public partial class RegionCaptureWindow
         foreach (var child in VisualTreeHelpers.EnumerateChildren(BottomToolbar))
         {
             if (child is not FrameworkElement fe) continue;
-            if (fe == BtnRecord || fe.Name == "BtnRecord") continue;
-            if (child is Button btn && btn != BtnRecord)
+            if (fe == BtnRecord || fe.Name == "BtnRecord" || fe == BtnPause || fe.Name == "BtnPause") continue;
+            if (child is Button btn && btn != BtnRecord && btn != BtnPause)
                 btn.IsEnabled = !recording;
         }
 
         if (recording)
+        {
             BottomToolbar.Cursor = Cursors.Arrow;
+            BtnPause.IsEnabled = true;
+        }
     }
 
     private void StartRecordBlink()
     {
         StopRecordBlink();
+        if (BtnRecord.Content != RecordDot)
+            return;
         var anim = new DoubleAnimation(1, 0.35, TimeSpan.FromMilliseconds(650))
         {
             AutoReverse = true,
@@ -186,6 +224,18 @@ public partial class RegionCaptureWindow
         RecordDot.Opacity = 1;
     }
 
+    private void StartPauseButtonBlink()
+    {
+        StopPauseButtonBlink();
+        _pauseBlinkStoryboard = PauseButtonBlink.Begin(BtnPause);
+    }
+
+    private void StopPauseButtonBlink()
+    {
+        PauseButtonBlink.Stop(_pauseBlinkStoryboard, BtnPause, clearBackground: true);
+        _pauseBlinkStoryboard = null;
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         StopEditorRecordingUi();
@@ -201,7 +251,6 @@ public partial class RegionCaptureWindow
         _ = NativeMethods.SetWindowDisplayAffinity(hwnd,
             exclude ? NativeMethods.WdaExcludeFromCapture : NativeMethods.WdaNone);
     }
-
 }
 
 internal static class VisualTreeHelpers

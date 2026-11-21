@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using WpfPoint = System.Windows.Point;
+using NEXTShot.Helpers;
 using NEXTShot.Native;
 using NEXTShot.Resources;
 using NEXTShot.Services;
@@ -20,7 +21,13 @@ public partial class RegionCaptureWindow : Window
     private readonly AppSettings? _settings;
     private readonly bool _videoSelectionOnly;
     private readonly Action<NativeMethods.Rect>? _onVideoRecord;
-    private readonly Func<bool>? _isVideoRecording;
+    private readonly Func<bool>? _isVideoSessionActive;
+    private readonly Action? _onVideoPauseToggle;
+    private readonly Func<TimeSpan>? _getRecordedDuration;
+    private readonly Func<bool>? _isVideoPaused;
+
+    private RegionCaptureWindow? _parentOverlay;
+    private bool _chromeSuppressedForNested;
 
     private WpfPoint _start;
     private bool _dragging;
@@ -37,15 +44,26 @@ public partial class RegionCaptureWindow : Window
 
     public RegionCaptureWindow() : this(null, false, null) { }
 
-    public RegionCaptureWindow(AppSettings? settings, bool videoSelectionOnly, Action<NativeMethods.Rect>? onVideoRecord, Func<bool>? isVideoRecording = null)
+    public RegionCaptureWindow(
+        AppSettings? settings,
+        bool videoSelectionOnly,
+        Action<NativeMethods.Rect>? onVideoRecord,
+        Func<bool>? isVideoSessionActive = null,
+        Action? onVideoPauseToggle = null,
+        Func<TimeSpan>? getRecordedDuration = null,
+        Func<bool>? isVideoPaused = null)
     {
         _settings = settings;
         _videoSelectionOnly = videoSelectionOnly;
         _onVideoRecord = onVideoRecord;
-        _isVideoRecording = isVideoRecording;
+        _isVideoSessionActive = isVideoSessionActive;
+        _onVideoPauseToggle = onVideoPauseToggle;
+        _getRecordedDuration = getRecordedDuration;
+        _isVideoPaused = isVideoPaused;
         InitializeComponent();
         InitSelectionChrome();
         InitCaptureToolbarIcons();
+        BtnPause.Visibility = Visibility.Collapsed;
         ApplyScreenBounds();
         if (!_videoSelectionOnly)
         {
@@ -129,7 +147,7 @@ public partial class RegionCaptureWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            if (_editorVideoRecording && _onVideoRecord is not null && _isVideoRecording?.Invoke() == true)
+            if (_editorVideoRecording && _onVideoRecord is not null && _isVideoSessionActive?.Invoke() == true)
             {
                 var rect = ToPhysicalRect(_selX, _selY, _selW, _selH);
                 _onVideoRecord(rect);
@@ -363,15 +381,78 @@ public partial class RegionCaptureWindow : Window
         if (_settings is null)
         {
             BtnRecord.Visibility = Visibility.Collapsed;
+            BtnPause.Visibility = Visibility.Collapsed;
             return;
         }
 
         BtnRecord.Visibility = Visibility.Visible;
-        var recording = _isVideoRecording?.Invoke() == true || _editorVideoRecording;
-        BtnRecord.ToolTip = recording ? "Остановить запись" : "Запись видео";
-        RecordDot.Background = recording
-            ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xC0, 0x22, 0x22))
-            : new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C));
+        var sessionActive = _isVideoSessionActive?.Invoke() == true || _editorVideoRecording;
+        var paused = _isVideoPaused?.Invoke() == true;
+        var useIcons = _settings.VideoControlPanelUseIcons;
+
+        if (useIcons || sessionActive)
+            VideoControlContent.ApplyOverlayRecord(BtnRecord, useIcons, sessionActive);
+        else
+            BtnRecord.Content = RecordDot;
+
+        BtnPause.Visibility = sessionActive ? Visibility.Visible : Visibility.Collapsed;
+
+        if (BtnRecord.Content == RecordDot)
+        {
+            var color = sessionActive && !paused
+                ? System.Windows.Media.Color.FromRgb(0xC0, 0x22, 0x22)
+                : sessionActive
+                    ? System.Windows.Media.Color.FromRgb(0x88, 0x88, 0x88)
+                    : System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C);
+            RecordDot.Background = new SolidColorBrush(color);
+        }
+
+        UpdatePauseButtonBlinkState(sessionActive, paused, useIcons);
+    }
+
+    private void UpdatePauseButtonBlinkState(bool sessionActive, bool paused, bool useIcons)
+    {
+        if (sessionActive && paused)
+        {
+            if (_pauseBlinkStoryboard is not null)
+                return;
+            VideoControlContent.ApplyOverlayPause(BtnPause, useIcons, paused: true);
+            StartPauseButtonBlink();
+            return;
+        }
+
+        if (_pauseBlinkStoryboard is not null)
+            StopPauseButtonBlink();
+        if (sessionActive)
+            VideoControlContent.ApplyOverlayPause(BtnPause, useIcons, paused: false);
+    }
+
+    internal void SetParentOverlay(RegionCaptureWindow? parent) => _parentOverlay = parent;
+
+    internal void SuppressChromeForNestedCapture(bool hide)
+    {
+        if (hide == _chromeSuppressedForNested) return;
+        _chromeSuppressedForNested = hide;
+        var vis = hide ? Visibility.Collapsed : Visibility.Visible;
+        if (_editorVideoRecording)
+        {
+            BottomToolbar.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+            TxtRecordDuration.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+        }
+        else if (_editing || _selW >= 5)
+        {
+            BottomToolbar.Visibility = vis;
+            RightToolbar.Visibility = vis;
+            SizeBadge.Visibility = vis;
+        }
+    }
+
+    private void Pause_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_onVideoPauseToggle is null) return;
+        _onVideoPauseToggle();
+        UpdateRecordButtonUi();
+        RefreshRecordDurationText();
     }
 
     private static bool IsDescendantOfToolbar(DependencyObject? d)
@@ -429,10 +510,27 @@ public partial class RegionCaptureWindow : Window
             ref bottomX, ref bottomY, bottomW, bottomH,
             gap, margin, cw, ch);
 
+        if (NeedsCompactToolbarLayout(capture, bottomW, bottomH, rightW, rightH, bottomX, bottomY, rx, ry))
+        {
+            ApplyCompactToolbarLayout(cw, ch, margin, gap, bottomW, bottomH, rightW, rightH,
+                out bottomX, out bottomY, out rx, out ry);
+        }
+
         Canvas.SetLeft(RightToolbar, rx);
         Canvas.SetTop(RightToolbar, ry);
         Canvas.SetLeft(BottomToolbar, bottomX);
         Canvas.SetTop(BottomToolbar, bottomY);
+
+        if (TxtRecordDuration.Visibility == Visibility.Visible)
+        {
+            TxtRecordDuration.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            var tw = Math.Max(TxtRecordDuration.DesiredSize.Width, TxtRecordDuration.ActualWidth);
+            if (tw < 1) tw = 48;
+            var tx = bottomX + bottomW / 2 - tw / 2;
+            var ty = bottomY + bottomH + 4;
+            Canvas.SetLeft(TxtRecordDuration, tx);
+            Canvas.SetTop(TxtRecordDuration, ty);
+        }
     }
 
     private static void ResolveToolbarOverlap(
@@ -476,6 +574,42 @@ public partial class RegionCaptureWindow : Window
 
         by = ry + rightH + gap;
         Clamp(ref bx, ref by, bottomW, bottomH, cw, ch, margin);
+    }
+
+    private static bool NeedsCompactToolbarLayout(
+        Rect capture, double bottomW, double bottomH, double rightW, double rightH,
+        double bottomX, double bottomY, double rx, double ry)
+    {
+        if (capture.Width < 220 || capture.Height < 160 || capture.Width * capture.Height < 32000)
+            return true;
+
+        var bottom = new Rect(bottomX, bottomY, bottomW, bottomH);
+        var right = new Rect(rx, ry, rightW, rightH);
+        if (bottom.IntersectsWith(capture) || right.IntersectsWith(capture))
+            return true;
+        if (bottom.IntersectsWith(right))
+            return true;
+        return false;
+    }
+
+    private static void ApplyCompactToolbarLayout(
+        double cw, double ch, double margin, double gap,
+        double bottomW, double bottomH, double rightW, double rightH,
+        out double bottomX, out double bottomY, out double rx, out double ry)
+    {
+        bottomX = Math.Clamp((cw - bottomW) / 2, margin, Math.Max(margin, cw - bottomW - margin));
+        bottomY = Math.Clamp(ch - bottomH - margin, margin, Math.Max(margin, ch - bottomH - margin));
+        rx = Math.Clamp(cw - rightW - margin, margin, Math.Max(margin, cw - rightW - margin));
+        ry = Math.Clamp(bottomY - rightH - gap, margin, Math.Max(margin, ch - rightH - margin));
+
+        if (new Rect(rx, ry, rightW, rightH).IntersectsWith(new Rect(bottomX, bottomY, bottomW, bottomH)))
+        {
+            rx = margin;
+            ry = Math.Clamp(bottomY - rightH - gap, margin, Math.Max(margin, ch - rightH - margin));
+        }
+
+        if (new Rect(rx, ry, rightW, rightH).IntersectsWith(new Rect(bottomX, bottomY, bottomW, bottomH)))
+            ry = Math.Clamp(margin, margin, Math.Max(margin, bottomY - rightH - gap));
     }
 
     private static (double x, double y) PlaceOutsideCapture(
@@ -681,7 +815,7 @@ public partial class RegionCaptureWindow : Window
         if (_settings is null || _onVideoRecord is null) return;
         if (_selW < 5 || _selH < 5) return;
 
-        var wasRecording = _editorVideoRecording || _isVideoRecording?.Invoke() == true;
+        var wasRecording = _editorVideoRecording || _isVideoSessionActive?.Invoke() == true;
         var rect = ToPhysicalRect(_selX, _selY, _selW, _selH);
         SelectedRect = rect;
         RecordFromOverlay = true;
@@ -699,7 +833,7 @@ public partial class RegionCaptureWindow : Window
         UpdateLayout();
         Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
         _onVideoRecord(rect);
-        if (_isVideoRecording?.Invoke() != true)
+        if (_isVideoSessionActive?.Invoke() != true)
         {
             StopEditorRecordingUi();
             return;

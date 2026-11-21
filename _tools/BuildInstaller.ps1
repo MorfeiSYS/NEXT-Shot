@@ -17,6 +17,8 @@ if (Test-Path (Join-Path $root 'CHANGELOG.md')) {
 
 Write-Host "Version: $version"
 
+. (Join-Path $PSScriptRoot 'Ensure-NEXTShot-NotRunning.ps1')
+
 if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
 New-Item -ItemType Directory -Force -Path $staging, $outDir | Out-Null
 

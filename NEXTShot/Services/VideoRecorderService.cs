@@ -8,18 +8,37 @@ namespace NEXTShot.Services;
 public sealed class VideoRecorderService : IDisposable
 {
     private Process? _process;
-    private string? _outputPath;
+    private string? _finalOutputPath;
+    private string? _currentSegmentPath;
     private NativeMethods.Rect? _activeRegion;
+    private AppSettings? _sessionSettings;
     private StringBuilder? _stderr;
+    private readonly List<string> _completedSegments = new();
+    private readonly Stopwatch _activeSegmentWatch = new();
+    private TimeSpan _accumulatedDuration;
+    private bool _sessionActive;
 
     public bool IsRecording => _process is { HasExited: false };
+    public bool IsSessionActive => _sessionActive;
+    public bool IsPaused => _sessionActive && !IsRecording;
     public NativeMethods.Rect? ActiveRegion => _activeRegion;
+
+    public TimeSpan RecordedDuration
+    {
+        get
+        {
+            var total = _accumulatedDuration;
+            if (IsRecording && _activeSegmentWatch.IsRunning)
+                total += _activeSegmentWatch.Elapsed;
+            return total;
+        }
+    }
 
     public string? Toggle(AppSettings settings, NativeMethods.Rect region)
     {
-        if (IsRecording)
+        if (IsSessionActive)
         {
-            var path = _outputPath;
+            var path = _finalOutputPath;
             Stop();
             return path;
         }
@@ -29,29 +48,79 @@ public sealed class VideoRecorderService : IDisposable
 
     public string? Start(AppSettings settings, NativeMethods.Rect region)
     {
-        if (IsRecording) return _outputPath;
+        if (IsSessionActive) return _finalOutputPath;
 
         var ffmpeg = FindFfmpeg();
         if (ffmpeg is null) return null;
 
         var savePath = string.IsNullOrWhiteSpace(settings.VideoSavePath) ? settings.ScreenshotsPath : settings.VideoSavePath;
         Directory.CreateDirectory(savePath);
-        _outputPath = Path.Combine(savePath, $"video_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+        _finalOutputPath = Path.Combine(savePath, $"video_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+        _sessionSettings = settings;
         _activeRegion = region;
+        _completedSegments.Clear();
+        _accumulatedDuration = TimeSpan.Zero;
+        _sessionActive = true;
+
+        if (!StartNextSegment())
+        {
+            ResetSession();
+            return null;
+        }
+
+        return _finalOutputPath;
+    }
+
+    public bool Pause()
+    {
+        if (!IsRecording) return false;
+        FinalizeCurrentSegment();
+        return IsPaused;
+    }
+
+    public bool Resume()
+    {
+        if (!IsPaused || _sessionSettings is null || _activeRegion is not { } region) return false;
+        return StartNextSegment();
+    }
+
+    public string? Stop()
+    {
+        if (!_sessionActive)
+            return null;
+
+        var output = _finalOutputPath;
+        if (IsRecording)
+            FinalizeCurrentSegment();
+
+        var path = FinalizeOutputFile();
+        ResetSession();
+        return path ?? output;
+    }
+
+    private bool StartNextSegment()
+    {
+        if (_sessionSettings is null || _activeRegion is not { } region) return false;
+
+        var ffmpeg = FindFfmpeg();
+        if (ffmpeg is null) return false;
+
+        var segDir = GetSegmentDirectory();
+        _currentSegmentPath = Path.Combine(segDir, $"seg_{DateTime.Now:yyyyMMdd_HHmmss_fff}.mp4");
 
         var w = Math.Max(2, region.Width & ~1);
         var h = Math.Max(2, region.Height & ~1);
-        var fps = settings.VideoQuality switch
+        var fps = _sessionSettings.VideoQuality switch
         {
             1 => 60,
             2 => 30,
             _ => 30
         };
 
-        var drawMouse = settings.CaptureCursor ? 1 : 0;
+        var drawMouse = _sessionSettings.CaptureCursor ? 1 : 0;
         var fullScreen = IsFullVirtualScreen(region);
-        var vf = fullScreen ? BuildFullScreenVideoFilter(settings) : string.Empty;
-        var argLine = BuildGdigrabArgs(fps, region, w, h, drawMouse, vf, _outputPath);
+        var vf = fullScreen ? BuildFullScreenVideoFilter(_sessionSettings) : string.Empty;
+        var argLine = BuildGdigrabArgs(fps, region, w, h, drawMouse, vf, _currentSegmentPath);
 
         _stderr = new StringBuilder();
         try
@@ -76,81 +145,217 @@ public sealed class VideoRecorderService : IDisposable
             };
             if (!_process.Start())
             {
-                FailStart();
-                return null;
+                FailSegmentStart();
+                return false;
             }
 
             _process.BeginErrorReadLine();
-
             Thread.Sleep(200);
             if (_process.HasExited)
             {
-                FailStart();
-                return null;
+                FailSegmentStart();
+                return false;
             }
 
-            return _outputPath;
+            _activeSegmentWatch.Restart();
+            return true;
         }
         catch
         {
-            FailStart();
+            FailSegmentStart();
+            return false;
+        }
+    }
+
+    private void FailSegmentStart()
+    {
+        try { _process?.Kill(entireProcessTree: true); } catch { }
+        _process?.Dispose();
+        _process = null;
+        if (_currentSegmentPath is not null && File.Exists(_currentSegmentPath))
+        {
+            try
+            {
+                if (new FileInfo(_currentSegmentPath).Length == 0)
+                    File.Delete(_currentSegmentPath);
+            }
+            catch { }
+        }
+
+        _currentSegmentPath = null;
+    }
+
+    private void FinalizeCurrentSegment()
+    {
+        _activeSegmentWatch.Stop();
+        if (_process is not null && !_process.HasExited)
+        {
+            try
+            {
+                _process.StandardInput.Write('q');
+                _process.StandardInput.WriteLine();
+                _process.StandardInput.Flush();
+                _process.StandardInput.Close();
+            }
+            catch
+            {
+                try { _process.Kill(entireProcessTree: true); } catch { }
+            }
+
+            _process.WaitForExit(15000);
+        }
+
+        _process?.Dispose();
+        _process = null;
+
+        if (_currentSegmentPath is not null && File.Exists(_currentSegmentPath))
+        {
+            var fi = new FileInfo(_currentSegmentPath);
+            if (fi.Length > 0)
+            {
+                _completedSegments.Add(_currentSegmentPath);
+                var segDur = ProbeDuration(_currentSegmentPath);
+                if (segDur > TimeSpan.Zero)
+                    _accumulatedDuration += segDur;
+                else
+                    _accumulatedDuration += _activeSegmentWatch.Elapsed;
+            }
+            else
+            {
+                try { File.Delete(_currentSegmentPath); } catch { }
+            }
+        }
+
+        _currentSegmentPath = null;
+        _activeSegmentWatch.Reset();
+    }
+
+    private string? FinalizeOutputFile()
+    {
+        if (_finalOutputPath is null) return null;
+
+        if (_completedSegments.Count == 0)
+        {
+            if (File.Exists(_finalOutputPath))
+            {
+                try { File.Delete(_finalOutputPath); } catch { }
+            }
+
+            return null;
+        }
+
+        try
+        {
+            if (_completedSegments.Count == 1)
+            {
+                var single = _completedSegments[0];
+                if (File.Exists(_finalOutputPath))
+                    File.Delete(_finalOutputPath);
+                File.Move(single, _finalOutputPath, overwrite: true);
+                return _finalOutputPath;
+            }
+
+            var ffmpeg = FindFfmpeg();
+            if (ffmpeg is null) return _completedSegments[^1];
+
+            var listPath = Path.Combine(GetSegmentDirectory(), $"concat_{Guid.NewGuid():N}.txt");
+            var lines = _completedSegments.Select(s =>
+            {
+                var escaped = s.Replace("'", "'\\''");
+                return $"file '{escaped}'";
+            });
+            File.WriteAllLines(listPath, lines);
+
+            if (File.Exists(_finalOutputPath))
+                File.Delete(_finalOutputPath);
+
+            var argLine = $"-hide_banner -loglevel error -y -f concat -safe 0 -i \"{listPath}\" -c copy \"{_finalOutputPath}\"";
+            using var proc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = ffmpeg,
+                    Arguments = argLine,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            proc.Start();
+            proc.WaitForExit(60000);
+
+            try { File.Delete(listPath); } catch { }
+            foreach (var seg in _completedSegments)
+            {
+                try { if (File.Exists(seg)) File.Delete(seg); } catch { }
+            }
+
+            if (File.Exists(_finalOutputPath) && new FileInfo(_finalOutputPath).Length > 0)
+                return _finalOutputPath;
+
+            return null;
+        }
+        catch
+        {
             return null;
         }
     }
 
-    private void FailStart()
+    private void ResetSession()
     {
         try { _process?.Kill(entireProcessTree: true); } catch { }
         _process?.Dispose();
         _process = null;
         _activeRegion = null;
-        if (_outputPath is not null && File.Exists(_outputPath))
-        {
-            try
-            {
-                if (new FileInfo(_outputPath).Length == 0)
-                    File.Delete(_outputPath);
-            }
-            catch { }
-        }
-
-        _outputPath = null;
+        _sessionSettings = null;
+        _finalOutputPath = null;
+        _currentSegmentPath = null;
+        _stderr = null;
+        _completedSegments.Clear();
+        _accumulatedDuration = TimeSpan.Zero;
+        _activeSegmentWatch.Reset();
+        _sessionActive = false;
     }
 
-    public string? Stop()
+    private static TimeSpan ProbeDuration(string path)
     {
-        var path = _outputPath;
-        if (_process is null || _process.HasExited)
-        {
-            _process = null;
-            _activeRegion = null;
-            return path;
-        }
+        var ffmpeg = FindFfmpeg();
+        if (ffmpeg is null) return TimeSpan.Zero;
 
         try
         {
-            _process.StandardInput.Write('q');
-            _process.StandardInput.WriteLine();
-            _process.StandardInput.Flush();
-            _process.StandardInput.Close();
+            using var proc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = ffmpeg,
+                    Arguments = $"-hide_banner -i \"{path}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
+                }
+            };
+            proc.Start();
+            var err = proc.StandardError.ReadToEnd();
+            proc.WaitForExit(5000);
+            var idx = err.IndexOf("Duration:", StringComparison.Ordinal);
+            if (idx < 0) return TimeSpan.Zero;
+            var slice = err.AsSpan(idx + 9);
+            var end = slice.IndexOf(',');
+            if (end < 0) return TimeSpan.Zero;
+            var durStr = slice[..end].Trim().ToString();
+            return TimeSpan.TryParse(durStr, out var ts) ? ts : TimeSpan.Zero;
         }
         catch
         {
-            try { _process.Kill(entireProcessTree: true); } catch { }
+            return TimeSpan.Zero;
         }
+    }
 
-        _process.WaitForExit(15000);
-        _process.Dispose();
-        _process = null;
-        _activeRegion = null;
-
-        if (path is not null && File.Exists(path) && new FileInfo(path).Length == 0)
-        {
-            try { File.Delete(path); } catch { }
-            return null;
-        }
-
-        return path;
+    private static string GetSegmentDirectory()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "NEXTShot", "segments");
+        Directory.CreateDirectory(dir);
+        return dir;
     }
 
     private static string BuildGdigrabArgs(int fps, NativeMethods.Rect region, int w, int h, int drawMouse, string vf, string outputPath)
