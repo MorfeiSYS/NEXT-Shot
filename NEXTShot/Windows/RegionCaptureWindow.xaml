@@ -148,8 +148,12 @@
                 <Button x:Name="BtnRecord" Style="{StaticResource Skr.CaptureToolButton}" ToolTip="Запись видео" Click="Record_OnClick">
                     <Border x:Name="RecordDot" Width="22" Height="22" CornerRadius="11" Background="#FFE74C3C"/>
                 </Button>
+                <Button x:Name="BtnPause" Style="{StaticResource Skr.CaptureToolButton}" ToolTip="Пауза" Click="Pause_OnClick"
+                        Visibility="Collapsed" MinWidth="36" Padding="8,4"/>
                 <Button Style="{StaticResource Skr.CaptureToolImageButton}" Content="/Resources/Toolbar/undo.png" ToolTip="Отменить" Click="UndoInk_OnClick"/>
             </StackPanel>
         </Border>
+        <TextBlock x:Name="TxtRecordDuration" Canvas.ZIndex="20" Visibility="Collapsed"
+                   Foreground="White" FontSize="12" Background="#AA252526" Padding="6,2"/>
     </Canvas>
 </Window>

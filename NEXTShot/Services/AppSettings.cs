@@ -17,8 +17,11 @@ public sealed class AppSettings
     public string VideoSavePath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
     public int JpegQuality { get; set; } = 90;
     public int ScreenshotFileType { get; set; } = 1;
+    /// <summary>Макс. одновременных оверлеев «снимок в снимке» (1–7).</summary>
+    public int MaxNestedRegionCaptures { get; set; } = 1;
     public int VideoQuality { get; set; } = 0;
     public bool ShowVideoControlPanel { get; set; } = true;
+    public bool VideoControlPanelUseIcons { get; set; } = false;
     public bool StartRecordingAfterSelection { get; set; } = false;
 
     public string HotkeyRegionScreenshot { get; set; } = "44";
@@ -48,13 +51,7 @@ public sealed class AppSettings
         var firstRun = loaded is null;
         var d = loaded ?? new AppSettings();
         if (firstRun)
-        {
             AutostartService.Apply(d.AutostartOn);
-        }
-        else
-        {
-            d.AutostartOn = AutostartService.IsEnabled();
-        }
 
         if (string.IsNullOrWhiteSpace(d.VideoSavePath))
             d.VideoSavePath = d.ScreenshotsPath;

@@ -22,6 +22,9 @@ public partial class App : Application
     private SingleInstanceService? _singleInstance;
     private RegionCapturePrimingHook? _regionPriming;
     private long _lastRegionCaptureTick;
+    private int _regionCaptureNestDepth;
+    private RegionCaptureWindow? _activeRegionOverlay;
+    private bool _videoPanelHiddenForNested;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -95,6 +98,8 @@ public partial class App : Application
     {
         _hotkeys.RegisterFromSettings(_settings);
         ConfigureRegionPrimingHook();
+        _videoPanel?.ApplySettings(_settings);
+        SyncVideoPanelState();
     }
 
     private void ConfigureRegionPrimingHook()
@@ -103,6 +108,15 @@ public partial class App : Application
         _regionPriming.Configure(_settings, _hotkeys.RegionHotkeyRegistered, () => _settings.CaptureCursor,
             () => Dispatcher.BeginInvoke(RequestRegionCapture));
     }
+
+    private RegionCaptureWindow CreateRegionOverlay() => new(
+        _settings,
+        false,
+        ToggleRecordingFromEditor,
+        () => _video.IsSessionActive,
+        TogglePause,
+        () => _video.RecordedDuration,
+        () => _video.IsPaused);
 
     private void RequestRegionCapture()
     {
@@ -114,20 +128,42 @@ public partial class App : Application
 
     private void CaptureRegion()
     {
+        var maxNested = Math.Clamp(_settings.MaxNestedRegionCaptures, 1, 7);
+        if (_regionCaptureNestDepth >= maxNested)
+        {
+            _tray?.ShowBalloonTip(SkrinshoterStrings.AppName,
+                $"Достигнут лимит вложенных снимков области ({maxNested}). Закройте текущий оверлей или увеличьте лимит в настройках.",
+                BalloonIcon.Warning);
+            return;
+        }
+
+        var nestedCapture = _activeRegionOverlay is not null || _video.IsSessionActive;
+        if (nestedCapture)
+            PrepareUiBeforeNestedDesktopCapture();
+
         DrawingBitmap? desktop = null;
         try
         {
-            desktop = _regionPriming?.TakePendingFrame();
-            if (desktop is null)
+            if (nestedCapture)
             {
                 using var bmp = ScreenCaptureService.CaptureVirtualScreen(_settings.CaptureCursor);
                 desktop = (DrawingBitmap)bmp.Clone();
             }
+            else
+            {
+                desktop = _regionPriming?.TakePendingFrame();
+                if (desktop is null)
+                {
+                    using var bmp = ScreenCaptureService.CaptureVirtualScreen(_settings.CaptureCursor);
+                    desktop = (DrawingBitmap)bmp.Clone();
+                }
+            }
 
-            var overlay = new RegionCaptureWindow(_settings, false, ToggleRecordingFromEditor, () => _video.IsRecording);
-            overlay.StartWithFrozenDesktop(desktop);
-            desktop = null;
-            overlay.ShowDialog();
+            RunRegionOverlay(overlay =>
+            {
+                overlay.StartWithFrozenDesktop(desktop!);
+                desktop = null;
+            });
         }
         catch (Exception ex)
         {
@@ -139,19 +175,102 @@ public partial class App : Application
         }
     }
 
+    private void PrepareUiBeforeNestedDesktopCapture()
+    {
+        _activeRegionOverlay?.SuppressChromeForNestedCapture(true);
+        SetVideoPanelHiddenForNested(true);
+        Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
+    }
+
+    private void SetVideoPanelHiddenForNested(bool hide)
+    {
+        if (_videoPanel is null) return;
+        if (hide)
+        {
+            if (_videoPanel.Visibility == Visibility.Visible)
+                _videoPanelHiddenForNested = true;
+            _videoPanel.Visibility = Visibility.Collapsed;
+        }
+        else if (_videoPanelHiddenForNested)
+        {
+            _videoPanel.Visibility = Visibility.Visible;
+            _videoPanelHiddenForNested = false;
+            _videoPanel.ReapplyCaptureExclusion();
+        }
+    }
+
+    private void RunRegionOverlay(Action<RegionCaptureWindow> prepare)
+    {
+        var maxNested = Math.Clamp(_settings.MaxNestedRegionCaptures, 1, 7);
+        if (_regionCaptureNestDepth >= maxNested)
+        {
+            _tray?.ShowBalloonTip(SkrinshoterStrings.AppName,
+                $"Достигнут лимит вложенных снимков области ({maxNested}). Закройте текущий оверлей или увеличьте лимит в настройках.",
+                BalloonIcon.Warning);
+            return;
+        }
+
+        _activeRegionOverlay?.SuppressChromeForNestedCapture(true);
+        if (_video.IsSessionActive)
+            SetVideoPanelHiddenForNested(true);
+        var overlay = CreateRegionOverlay();
+        overlay.SetParentOverlay(_activeRegionOverlay);
+        _regionCaptureNestDepth++;
+        var previous = _activeRegionOverlay;
+        _activeRegionOverlay = overlay;
+        try
+        {
+            prepare(overlay);
+            overlay.ShowDialog();
+        }
+        finally
+        {
+            _regionCaptureNestDepth--;
+            _activeRegionOverlay = previous;
+            previous?.SuppressChromeForNestedCapture(false);
+            SetVideoPanelHiddenForNested(false);
+        }
+    }
+
     private void ToggleRecordingFromEditor(NativeMethods.Rect rect)
     {
-        if (_video.IsRecording)
+        if (_video.IsSessionActive)
         {
             _mouseClicks.Stop();
             if (_video.Stop() is { } path)
                 _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, $"Запись сохранена:\n{path}", BalloonIcon.Info);
             CloseVideoPanel();
             UpdateVideoMenuItem();
+            SyncVideoPanelState();
             return;
         }
 
         BeginRecording(rect);
+    }
+
+    private void TogglePause()
+    {
+        if (!_video.IsSessionActive) return;
+
+        if (_video.IsPaused)
+        {
+            if (!_video.Resume())
+            {
+                MessageBox.Show("Не удалось продолжить запись.", SkrinshoterStrings.AppName);
+                return;
+            }
+
+            if (_video.ActiveRegion is { } r)
+                _mouseClicks.Start(_settings, r);
+        }
+        else
+        {
+            if (!_video.Pause())
+                return;
+            _mouseClicks.Stop();
+        }
+
+        SyncVideoPanelState();
     }
 
     private void CaptureWindow()
@@ -197,19 +316,25 @@ public partial class App : Application
     private void OpenInRegionEditor(System.Drawing.Bitmap bitmap, NativeMethods.Rect screenRect)
     {
         var clone = (System.Drawing.Bitmap)bitmap.Clone();
-        var overlay = new RegionCaptureWindow(_settings, false, ToggleRecordingFromEditor, () => _video.IsRecording);
-        overlay.StartWithExistingCapture(clone, screenRect);
-        overlay.ShowDialog();
+        try
+        {
+            RunRegionOverlay(overlay => overlay.StartWithExistingCapture(clone, screenRect));
+        }
+        finally
+        {
+            clone.Dispose();
+        }
     }
 
     private void ToggleVideo()
     {
-        if (_video.IsRecording)
+        if (_video.IsSessionActive)
         {
             _mouseClicks.Stop();
             var path = _video.Stop();
             CloseVideoPanel();
             UpdateVideoMenuItem();
+            SyncVideoPanelState();
             if (path is not null)
                 _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, $"Запись сохранена:\n{path}", BalloonIcon.Info);
             return;
@@ -224,8 +349,13 @@ public partial class App : Application
         try
         {
             var rect = ScreenCaptureService.GetVirtualScreenRect();
-            ShowVideoPanel();
-            if (_settings.StartRecordingAfterSelection)
+            if (_settings.ShowVideoControlPanel)
+            {
+                ShowVideoPanel();
+                if (_settings.StartRecordingAfterSelection)
+                    BeginRecording(rect);
+            }
+            else
                 BeginRecording(rect);
         }
         catch (Exception ex)
@@ -243,10 +373,19 @@ public partial class App : Application
             return;
         }
 
-        _videoPanel?.SetRecording(true);
         _mouseClicks.Start(_settings, region);
+        SyncVideoPanelState();
         UpdateVideoMenuItem();
         _tray?.ShowBalloonTip(SkrinshoterStrings.AppName, "Запись начата", BalloonIcon.Info);
+    }
+
+    private void SyncVideoPanelState()
+    {
+        if (_videoPanel is null) return;
+        _videoPanel.GetRecordedDuration = () => _video.RecordedDuration;
+        _videoPanel.SetSessionState(_video.IsSessionActive, _video.IsRecording, _video.IsPaused);
+        if (_video.IsSessionActive)
+            _videoPanel.ReapplyCaptureExclusion();
     }
 
     private void ShowVideoPanel()
@@ -254,11 +393,20 @@ public partial class App : Application
         CloseVideoPanel();
         var rect = ScreenCaptureService.GetVirtualScreenRect();
         _videoPanel = new VideoControlPanelWindow();
+        _videoPanel.ApplySettings(_settings);
+        _videoPanel.GetRecordedDuration = () => _video.RecordedDuration;
         _videoPanel.StartRequested += () => Dispatcher.Invoke(() => BeginRecording(rect));
+        _videoPanel.PauseToggleRequested += () => Dispatcher.Invoke(TogglePause);
         _videoPanel.StopRequested += () => Dispatcher.Invoke(ToggleVideo);
         _videoPanel.Cancelled += () => Dispatcher.Invoke(() => _videoPanel = null);
-        _videoPanel.Closed += (_, _) => { if (_videoPanel is not null && !_video.IsRecording) _videoPanel = null; };
+        _videoPanel.Closed += (_, _) =>
+        {
+            if (_videoPanel is not null && !_video.IsSessionActive)
+                _videoPanel = null;
+        };
         _videoPanel.Show();
+        _videoPanel.ReapplyCaptureExclusion();
+        SyncVideoPanelState();
     }
 
     private void CloseVideoPanel()
@@ -273,6 +421,6 @@ public partial class App : Application
     {
         if (_tray?.ContextMenu is not ContextMenu menu) return;
         if (menu.Items.Count > 4 && menu.Items[4] is MenuItem mi)
-            mi.Header = _video.IsRecording ? "Остановить запись" : "Запись видео";
+            mi.Header = _video.IsSessionActive ? "Остановить запись" : "Запись видео";
     }
 }

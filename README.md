@@ -11,7 +11,7 @@ WPF-приложение для Windows: скриншоты области/ок�
 ## Сборка
 
 ```powershell
-dotnet build NEXTShot\NEXTShot.csproj -c Release
+.\_tools\Build.ps1
 ```
 
 При первой сборке скачается `ffmpeg.exe` (BtbN FFmpeg-Builds) в `NEXTShot/ffmpeg/`.

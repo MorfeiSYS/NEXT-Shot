@@ -104,6 +104,19 @@
                 </Grid>
                 <CheckBox x:Name="ChkPlaySound" Content="Проигрывать звук" Margin="0,12,0,0"/>
                 <CheckBox x:Name="ChkAlwaysEditor" Content="Открывать редактор после снимка активного окна" Margin="0,6"/>
+                <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Вложенные снимки области" Margin="0,12,0,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Максимум оверлеев (снимок в снимке)" VerticalAlignment="Center" Width="260" TextWrapping="Wrap"/>
+                    <ComboBox x:Name="CmbMaxNestedCaptures" Width="60" VerticalAlignment="Center">
+                        <ComboBoxItem Content="1"/>
+                        <ComboBoxItem Content="2"/>
+                        <ComboBoxItem Content="3"/>
+                        <ComboBoxItem Content="4"/>
+                        <ComboBoxItem Content="5"/>
+                        <ComboBoxItem Content="6"/>
+                        <ComboBoxItem Content="7"/>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
 
             <StackPanel x:Name="PageVideo" Visibility="Collapsed">
@@ -127,6 +140,7 @@
                 <CheckBox x:Name="ChkVideoCursor" Content="Показывать курсор мыши" Margin="0,6"/>
                 <CheckBox x:Name="ChkVideoClicks" Content="Показывать подсветку кликов мыши" Margin="0,6"/>
                 <CheckBox x:Name="ChkVideoControlPanel" Content="Показывать панель управления во время записи" Margin="0,6"/>
+                <CheckBox x:Name="ChkVideoPanelIcons" Content="Панель записи: кнопки-значки (как на видеомагнитофоне)" Margin="0,6"/>
                 <CheckBox x:Name="ChkVideoStartImmediate" Content="Начинать запись сразу после выделения области" Margin="0,6"/>
             </StackPanel>
 
