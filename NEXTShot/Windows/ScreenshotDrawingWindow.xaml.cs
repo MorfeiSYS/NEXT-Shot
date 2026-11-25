@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using NEXTShot.Helpers;
 using NEXTShot.Services;
 
 namespace NEXTShot.Windows;
@@ -48,7 +49,8 @@ public partial class ScreenshotDrawingWindow : Window
     private void Copy_OnClick(object sender, RoutedEventArgs e)
     {
         using var merged = Merge();
-        Clipboard.SetImage(ScreenCaptureService.ToBitmapSource(merged));
+        if (!ClipboardHelper.TrySetImage(ScreenCaptureService.ToBitmapSource(merged)))
+            MessageBox.Show(ClipboardHelper.ClipboardBusyMessage, NEXTShot.Resources.SkrinshoterStrings.AppName);
     }
 
     private void Close_OnClick(object sender, RoutedEventArgs e) => Close();
