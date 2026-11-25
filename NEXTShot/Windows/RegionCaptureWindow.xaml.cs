@@ -512,7 +512,7 @@ public partial class RegionCaptureWindow : Window
 
         if (NeedsCompactToolbarLayout(capture, bottomW, bottomH, rightW, rightH, bottomX, bottomY, rx, ry))
         {
-            ApplyCompactToolbarLayout(cw, ch, margin, gap, bottomW, bottomH, rightW, rightH,
+            ApplyCompactToolbarLayout(capture, cw, ch, margin, gap, bottomW, bottomH, rightW, rightH,
                 out bottomX, out bottomY, out rx, out ry);
         }
 
@@ -580,9 +580,6 @@ public partial class RegionCaptureWindow : Window
         Rect capture, double bottomW, double bottomH, double rightW, double rightH,
         double bottomX, double bottomY, double rx, double ry)
     {
-        if (capture.Width < 220 || capture.Height < 160 || capture.Width * capture.Height < 32000)
-            return true;
-
         var bottom = new Rect(bottomX, bottomY, bottomW, bottomH);
         var right = new Rect(rx, ry, rightW, rightH);
         if (bottom.IntersectsWith(capture) || right.IntersectsWith(capture))
@@ -593,23 +590,53 @@ public partial class RegionCaptureWindow : Window
     }
 
     private static void ApplyCompactToolbarLayout(
-        double cw, double ch, double margin, double gap,
+        Rect capture, double cw, double ch, double margin, double gap,
         double bottomW, double bottomH, double rightW, double rightH,
         out double bottomX, out double bottomY, out double rx, out double ry)
     {
-        bottomX = Math.Clamp((cw - bottomW) / 2, margin, Math.Max(margin, cw - bottomW - margin));
-        bottomY = Math.Clamp(ch - bottomH - margin, margin, Math.Max(margin, ch - bottomH - margin));
-        rx = Math.Clamp(cw - rightW - margin, margin, Math.Max(margin, cw - rightW - margin));
-        ry = Math.Clamp(bottomY - rightH - gap, margin, Math.Max(margin, ch - rightH - margin));
-
-        if (new Rect(rx, ry, rightW, rightH).IntersectsWith(new Rect(bottomX, bottomY, bottomW, bottomH)))
+        static void ClampBar(ref double px, ref double py, double w, double h, double cw, double ch, double margin)
         {
-            rx = margin;
-            ry = Math.Clamp(bottomY - rightH - gap, margin, Math.Max(margin, ch - rightH - margin));
+            px = Math.Clamp(px, margin, Math.Max(margin, cw - w - margin));
+            py = Math.Clamp(py, margin, Math.Max(margin, ch - h - margin));
+        }
+
+        bottomX = capture.Left + capture.Width / 2 - bottomW / 2;
+        bottomY = capture.Bottom + gap;
+        if (bottomY + bottomH > ch - margin)
+            bottomY = capture.Top - bottomH - gap;
+        ClampBar(ref bottomX, ref bottomY, bottomW, bottomH, cw, ch, margin);
+
+        rx = capture.Right + gap;
+        ry = capture.Top;
+        if (rx + rightW > cw - margin)
+            rx = capture.Left - rightW - gap;
+        if (rx < margin)
+            rx = Math.Clamp(capture.Right + gap, margin, Math.Max(margin, cw - rightW - margin));
+        ClampBar(ref rx, ref ry, rightW, rightH, cw, ch, margin);
+
+        if (new Rect(rx, ry, rightW, rightH).IntersectsWith(capture))
+        {
+            ry = capture.Bottom + gap;
+            if (ry + rightH > ch - margin)
+                ry = capture.Top - rightH - gap;
+            ClampBar(ref rx, ref ry, rightW, rightH, cw, ch, margin);
         }
 
         if (new Rect(rx, ry, rightW, rightH).IntersectsWith(new Rect(bottomX, bottomY, bottomW, bottomH)))
-            ry = Math.Clamp(margin, margin, Math.Max(margin, bottomY - rightH - gap));
+        {
+            ry = bottomY - rightH - gap;
+            if (ry < margin)
+                ry = bottomY + bottomH + gap;
+            ClampBar(ref rx, ref ry, rightW, rightH, cw, ch, margin);
+        }
+
+        if (new Rect(bottomX, bottomY, bottomW, bottomH).IntersectsWith(capture))
+        {
+            bottomY = capture.Top - bottomH - gap;
+            if (bottomY < margin)
+                bottomY = capture.Bottom + gap;
+            ClampBar(ref bottomX, ref bottomY, bottomW, bottomH, cw, ch, margin);
+        }
     }
 
     private static (double x, double y) PlaceOutsideCapture(
@@ -784,7 +811,13 @@ public partial class RegionCaptureWindow : Window
     {
         if (_capturedBitmap is null) return;
         using var merged = GetMergedBitmap();
-        Clipboard.SetImage(ScreenCaptureService.ToBitmapSource(merged));
+        var source = ScreenCaptureService.ToBitmapSource(merged);
+        if (!ClipboardHelper.TrySetImage(source))
+        {
+            MessageBox.Show(ClipboardHelper.ClipboardBusyMessage, SkrinshoterStrings.AppName);
+            return;
+        }
+
         DialogResult = true;
         Close();
     }
@@ -794,7 +827,12 @@ public partial class RegionCaptureWindow : Window
         if (_settings is null || _capturedBitmap is null) return;
         using var merged = GetMergedBitmap();
         ScreenCaptureService.SaveBitmap(merged, _savePath, _settings.JpegQuality, _settings.ScreenshotFileType == 1);
-        Clipboard.SetText(_savePath);
+        if (!ClipboardHelper.TrySetText(_savePath))
+        {
+            MessageBox.Show(ClipboardHelper.ClipboardBusyMessage, SkrinshoterStrings.AppName);
+            return;
+        }
+
         MessageBox.Show($"Облако недоступно. Путь скопирован в буфер.\n{_savePath}", SkrinshoterStrings.AppName);
         DialogResult = true;
         Close();

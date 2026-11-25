@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.IO;
 using System.Windows;
+using NEXTShot.Helpers;
 using NEXTShot.Services;
 
 namespace NEXTShot.Windows;
@@ -28,14 +29,24 @@ public partial class ScreenshotActionWindow : Window
 
     private void Copy_OnClick(object sender, RoutedEventArgs e)
     {
-        Clipboard.SetImage(ScreenCaptureService.ToBitmapSource(_bitmap));
+        if (!ClipboardHelper.TrySetImage(ScreenCaptureService.ToBitmapSource(_bitmap)))
+        {
+            MessageBox.Show(ClipboardHelper.ClipboardBusyMessage, NEXTShot.Resources.SkrinshoterStrings.AppName);
+            return;
+        }
+
         Close();
     }
 
     private void Cloud_OnClick(object sender, RoutedEventArgs e)
     {
         ScreenCaptureService.SaveBitmap(_bitmap, _path, _settings.JpegQuality, _settings.ScreenshotFileType == 1);
-        Clipboard.SetText(_path);
+        if (!ClipboardHelper.TrySetText(_path))
+        {
+            MessageBox.Show(ClipboardHelper.ClipboardBusyMessage, NEXTShot.Resources.SkrinshoterStrings.AppName);
+            return;
+        }
+
         MessageBox.Show($"Облако отключено. Файл сохранен локально, путь скопирован в буфер.\n{_path}", NEXTShot.Resources.SkrinshoterStrings.AppName);
         Close();
     }
