@@ -25,6 +25,7 @@ public partial class App : Application
     private int _regionCaptureNestDepth;
     private RegionCaptureWindow? _activeRegionOverlay;
     private bool _videoPanelHiddenForNested;
+    private AutomaticUpdateService? _automaticUpdates;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -62,10 +63,13 @@ public partial class App : Application
                 BalloonIcon.Warning);
         }
         UpdateVideoMenuItem();
+        _automaticUpdates = new AutomaticUpdateService(() => _settings);
+        _automaticUpdates.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _automaticUpdates?.Dispose();
         CloseVideoPanel();
         _hotkeys.Dispose();
         _regionPriming?.Dispose();
@@ -100,6 +104,7 @@ public partial class App : Application
         ConfigureRegionPrimingHook();
         _videoPanel?.ApplySettings(_settings);
         SyncVideoPanelState();
+        _automaticUpdates?.OnSettingsChanged();
     }
 
     private void ConfigureRegionPrimingHook()

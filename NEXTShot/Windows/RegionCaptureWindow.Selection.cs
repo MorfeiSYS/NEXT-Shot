@@ -121,7 +121,7 @@ public partial class RegionCaptureWindow
         else if (_editing)
             Cursor = Cursors.Arrow;
         else
-            Cursor = Cursors.Cross;
+            Cursor = Cursors.None;
     }
 
     private void OpenEditorForCurrentSelection()

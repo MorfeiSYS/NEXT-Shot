@@ -24,7 +24,7 @@ public partial class SettingsWindow : Window
 
         ChkAutostart.IsChecked = _settings.AutostartOn;
         ChkSilent.IsChecked = _settings.SilentMode;
-        ChkUpdates.IsChecked = _settings.CheckForUpdates;
+        SelectUpdateCheckInterval(_settings.UpdateCheckInterval);
         ChkPlaySound.IsChecked = _settings.PlaySound;
         ChkAlwaysEditor.IsChecked = _settings.AlwaysShowEditor;
         ChkVideoCursor.IsChecked = _settings.CaptureCursor;
@@ -54,6 +54,29 @@ public partial class SettingsWindow : Window
         if (e.AddedItems.Count == 0) return;
         if (NavList.SelectedItem is ListBoxItem item && item.Tag is string tag)
             ShowPage(tag);
+    }
+
+    private void SelectUpdateCheckInterval(int interval)
+    {
+        var target = Math.Clamp(interval, 0, 2);
+        for (var i = 0; i < CmbUpdateCheck.Items.Count; i++)
+        {
+            if (CmbUpdateCheck.Items[i] is not ComboBoxItem item) continue;
+            if (item.Tag is string tag && int.TryParse(tag, out var v) && v == target)
+            {
+                CmbUpdateCheck.SelectedIndex = i;
+                return;
+            }
+        }
+
+        CmbUpdateCheck.SelectedIndex = 1;
+    }
+
+    private int ReadUpdateCheckInterval()
+    {
+        if (CmbUpdateCheck.SelectedItem is ComboBoxItem item && item.Tag is string tag && int.TryParse(tag, out var v))
+            return Math.Clamp(v, 0, 2);
+        return (int)UpdateCheckIntervalKind.Weekly;
     }
 
     private void ShowPage(string tag)
@@ -139,7 +162,7 @@ public partial class SettingsWindow : Window
     {
         _settings.AutostartOn = ChkAutostart.IsChecked == true;
         _settings.SilentMode = ChkSilent.IsChecked == true;
-        _settings.CheckForUpdates = ChkUpdates.IsChecked == true;
+        _settings.UpdateCheckInterval = ReadUpdateCheckInterval();
         _settings.PlaySound = ChkPlaySound.IsChecked == true;
         _settings.AlwaysShowEditor = ChkAlwaysEditor.IsChecked == true;
         _settings.CaptureCursor = ChkVideoCursor.IsChecked == true;

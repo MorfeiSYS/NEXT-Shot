@@ -1,7 +1,10 @@
+using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Windows;
 
 namespace NEXTShot.Services;
 
@@ -271,6 +274,39 @@ public static class UpdateCheckService
     }
 
     public static string FormatVersion(Version v) => $"{v.Major}.{v.Minor}.{v.Build}";
+
+    public static async Task<string?> DownloadInstallerAsync(string downloadUrl, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(downloadUrl)) return null;
+
+        var dir = Path.Combine(AppSettings.SettingsDirectory, "Updates");
+        Directory.CreateDirectory(dir);
+
+        var name = Path.GetFileName(new Uri(downloadUrl).AbsolutePath);
+        if (string.IsNullOrWhiteSpace(name))
+            name = "NEXTShot-Setup.exe";
+        var path = Path.Combine(dir, name);
+
+        using var response = await Http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode) return null;
+
+        await using var fs = File.Create(path);
+        await response.Content.CopyToAsync(fs, ct).ConfigureAwait(false);
+        return path;
+    }
+
+    public static void StartSilentInstallAndExit(string setupPath)
+    {
+        if (!File.Exists(setupPath)) return;
+
+        Process.Start(new ProcessStartInfo(setupPath)
+        {
+            UseShellExecute = true,
+            Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART"
+        });
+
+        Application.Current.Shutdown();
+    }
 
     private static string TrimBody(string body) =>
         body.Length > 120 ? body[..120] + "…" : body;

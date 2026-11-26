@@ -71,7 +71,14 @@
                 <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Общие настройки"/>
                 <CheckBox x:Name="ChkAutostart" Content="Запускать при старте Windows" Margin="0,6"/>
                 <CheckBox x:Name="ChkSilent" Content="Тихий режим" Margin="0,6"/>
-                <CheckBox x:Name="ChkUpdates" Content="Проверять наличие обновлений" Margin="0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6">
+                    <TextBlock Text="Проверка обновлений" VerticalAlignment="Center" Width="200"/>
+                    <ComboBox x:Name="CmbUpdateCheck" Width="220" VerticalAlignment="Center">
+                        <ComboBoxItem Content="Не проверять" Tag="0"/>
+                        <ComboBoxItem Content="Раз в неделю" Tag="1"/>
+                        <ComboBoxItem Content="Раз в месяц" Tag="2"/>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
 
             <StackPanel x:Name="PageHotkeys" Visibility="Collapsed">
@@ -151,8 +158,11 @@
                             Content="Сообщить об ошибке" Click="ReportBug_OnClick"/>
                 </StackPanel>
                 <StackPanel>
+                    <TextBlock Style="{StaticResource Set.SectionHeader}" Text="Обновления" Margin="0,0,0,4"/>
+                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Foreground="{StaticResource Set.Shell.SubtextBrush}"
+                               Text="При нахождении новой версии установщик скачивается и ставится тихо; интервал задаётся в разделе «Общие»."/>
                     <StackPanel Orientation="Horizontal" Margin="0,8">
-                        <Button x:Name="BtnCheckUpdates" Style="{StaticResource Set.SecondaryButton}" Content="Проверить обновления" Click="CheckUpdates_OnClick"/>
+                        <Button x:Name="BtnCheckUpdates" Style="{StaticResource Set.SecondaryButton}" Content="Проверить сейчас" Click="CheckUpdates_OnClick"/>
                     </StackPanel>
                 </StackPanel>
             </DockPanel>

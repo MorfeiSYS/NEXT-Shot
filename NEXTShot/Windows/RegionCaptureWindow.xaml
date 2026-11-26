@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctl="clr-namespace:NEXTShot.Controls"
         WindowStyle="None" AllowsTransparency="True" Background="#01000000"
-        Topmost="True" ShowInTaskbar="False" Cursor="Cross" KeyDown="Window_OnKeyDown"
+        Topmost="True" ShowInTaskbar="False" KeyDown="Window_OnKeyDown"
         PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown"
         PreviewMouseMove="Window_PreviewMouseMove"
         PreviewMouseLeftButtonUp="Window_PreviewMouseLeftButtonUp">
@@ -89,6 +89,10 @@
         <Rectangle x:Name="ShadeRight" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
         <Rectangle x:Name="ShadeBottom" Fill="{StaticResource Skr.OverlayDimBrush}" IsHitTestVisible="False"/>
 
+        <Rectangle x:Name="SelectionDashedFrame" Stroke="White" StrokeThickness="1"
+                   StrokeDashArray="5 3" Fill="Transparent" Visibility="Collapsed"
+                   SnapsToDevicePixels="True" IsHitTestVisible="False"/>
+
         <Border x:Name="SelectionBorder" BorderBrush="White" BorderThickness="0"
                 Background="Transparent" SnapsToDevicePixels="True" Visibility="Collapsed">
             <Grid x:Name="CaptureHost" ClipToBounds="True"
@@ -109,6 +113,8 @@
         </Border>
 
         <Canvas x:Name="SelectionChrome" Visibility="Collapsed" IsHitTestVisible="False"/>
+
+        <Canvas x:Name="CrosshairCanvas" Visibility="Collapsed" IsHitTestVisible="False"/>
 
         <Border x:Name="RightToolbar" Style="{StaticResource Skr.CaptureToolbar}" Visibility="Collapsed" Width="48">
             <StackPanel>
