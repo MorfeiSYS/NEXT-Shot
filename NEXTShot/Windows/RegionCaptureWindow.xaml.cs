@@ -61,6 +61,7 @@ public partial class RegionCaptureWindow : Window
         _getRecordedDuration = getRecordedDuration;
         _isVideoPaused = isVideoPaused;
         InitializeComponent();
+        Cursor = Cursors.None;
         InitSelectionChrome();
         InitCaptureToolbarIcons();
         BtnPause.Visibility = Visibility.Collapsed;
@@ -200,6 +201,9 @@ public partial class RegionCaptureWindow : Window
     {
         var pos = e.GetPosition(OverlayCanvas);
 
+        if (!_editing)
+            UpdateCrosshairOverlay(pos);
+
         if (_selInteraction == SelInteraction.Moving)
         {
             MoveSelection(pos);
@@ -328,6 +332,7 @@ public partial class RegionCaptureWindow : Window
         BlurCanvas.Height = frameH;
 
         _editing = true;
+        HideCrosshairOverlay();
         Cursor = Cursors.Arrow;
         ShowEditChrome(frameX, frameY, frameW, frameH);
 
@@ -708,12 +713,30 @@ public partial class RegionCaptureWindow : Window
         var fw = _editing ? _selW : w;
         var fh = _editing ? _selH : h;
 
-        var outline = _editorVideoRecording ? 1.0 : 2.0;
-        SelectionBorder.BorderThickness = new Thickness(outline);
-        Canvas.SetLeft(SelectionBorder, fx - outline);
-        Canvas.SetTop(SelectionBorder, fy - outline);
-        SelectionBorder.Width = fw + outline * 2;
-        SelectionBorder.Height = fh + outline * 2;
+        var useDashedOutline = !_editing && SelectionBorder.Visibility == Visibility.Visible;
+        if (useDashedOutline)
+        {
+            SelectionDashedFrame.Visibility = Visibility.Visible;
+            Canvas.SetLeft(SelectionDashedFrame, fx);
+            Canvas.SetTop(SelectionDashedFrame, fy);
+            SelectionDashedFrame.Width = Math.Max(0, fw);
+            SelectionDashedFrame.Height = Math.Max(0, fh);
+            SelectionBorder.BorderThickness = new Thickness(0);
+            Canvas.SetLeft(SelectionBorder, fx);
+            Canvas.SetTop(SelectionBorder, fy);
+            SelectionBorder.Width = Math.Max(0, fw);
+            SelectionBorder.Height = Math.Max(0, fh);
+        }
+        else
+        {
+            SelectionDashedFrame.Visibility = Visibility.Collapsed;
+            var outline = _editorVideoRecording ? 0.5 : 1.0;
+            SelectionBorder.BorderThickness = new Thickness(outline);
+            Canvas.SetLeft(SelectionBorder, fx - outline);
+            Canvas.SetTop(SelectionBorder, fy - outline);
+            SelectionBorder.Width = fw + outline * 2;
+            SelectionBorder.Height = fh + outline * 2;
+        }
         SizeText.Text = $"{(int)fw} × {(int)fh}";
         Canvas.SetLeft(SizeBadge, fx);
         Canvas.SetTop(SizeBadge, Math.Max(0, fy - 28));

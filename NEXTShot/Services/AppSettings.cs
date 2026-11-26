@@ -10,7 +10,11 @@ public sealed class AppSettings
     public bool CaptureCursor { get; set; } = true;
     public bool PlaySound { get; set; } = true;
     public bool SilentMode { get; set; } = true;
-    public bool CheckForUpdates { get; set; } = false;
+    /// <summary>0 — не проверять, 1 — раз в неделю, 2 — раз в месяц.</summary>
+    public int UpdateCheckInterval { get; set; } = (int)UpdateCheckIntervalKind.Weekly;
+
+    public DateTime? LastUpdateCheckUtc { get; set; }
+
     public bool AlwaysShowEditor { get; set; } = false;
     public bool HighlightMouseClicks { get; set; } = true;
     public string ScreenshotsPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
@@ -38,11 +42,12 @@ public sealed class AppSettings
     public static AppSettings Load()
     {
         AppSettings? loaded = null;
+        string? json = null;
         try
         {
             if (File.Exists(SettingsPath))
             {
-                var json = File.ReadAllText(SettingsPath);
+                json = File.ReadAllText(SettingsPath);
                 loaded = JsonSerializer.Deserialize<AppSettings>(json);
             }
         }
@@ -50,6 +55,10 @@ public sealed class AppSettings
 
         var firstRun = loaded is null;
         var d = loaded ?? new AppSettings();
+        if (loaded is not null && json is not null)
+            MigrateLegacyUpdateCheck(d, json);
+        else
+            d.UpdateCheckInterval = (int)UpdateCheckIntervalExtensions.ClampInterval(d.UpdateCheckInterval);
         if (firstRun)
             AutostartService.Apply(d.AutostartOn);
 
@@ -58,6 +67,37 @@ public sealed class AppSettings
         if (firstRun)
             d.Save();
         return d;
+    }
+
+    private static void MigrateLegacyUpdateCheck(AppSettings d, string json)
+    {
+        if (json.Contains("UpdateCheckInterval", StringComparison.OrdinalIgnoreCase))
+        {
+            d.UpdateCheckInterval = (int)UpdateCheckIntervalExtensions.ClampInterval(d.UpdateCheckInterval);
+            return;
+        }
+
+        if (json.Contains("\"CheckForUpdates\"", StringComparison.OrdinalIgnoreCase))
+        {
+            var enabled = json.Contains("\"CheckForUpdates\":true", StringComparison.OrdinalIgnoreCase)
+                          || json.Contains("\"CheckForUpdates\": true", StringComparison.OrdinalIgnoreCase);
+            d.UpdateCheckInterval = enabled
+                ? (int)UpdateCheckIntervalKind.Weekly
+                : (int)UpdateCheckIntervalKind.None;
+        }
+        else
+            d.UpdateCheckInterval = (int)UpdateCheckIntervalKind.Weekly;
+    }
+
+    public UpdateCheckIntervalKind UpdateCheckKind =>
+        UpdateCheckIntervalExtensions.ClampInterval(UpdateCheckInterval);
+
+    public bool IsAutomaticUpdateCheckDueUtc(DateTime utcNow)
+    {
+        var kind = UpdateCheckKind;
+        if (kind == UpdateCheckIntervalKind.None) return false;
+        if (LastUpdateCheckUtc is null) return true;
+        return utcNow - LastUpdateCheckUtc.Value >= kind.ToPeriod();
     }
 
     public void Save()

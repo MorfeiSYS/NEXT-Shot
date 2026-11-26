@@ -12,9 +12,12 @@ public static class BrushContrast
         button.Foreground = PickForeground(brush.Color);
     }
 
-    public static Brush PickForeground(Color background)
+    public static Brush PickForeground(Color background) =>
+        new SolidColorBrush(PickContrastStroke(background));
+
+    public static Color PickContrastStroke(Color background)
     {
         var luminance = (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0;
-        return new SolidColorBrush(luminance > 0.55 ? Color.FromRgb(0x1A, 0x1A, 0x1A) : Colors.White);
+        return luminance > 0.55 ? Color.FromRgb(0x1A, 0x1A, 0x1A) : Colors.White;
     }
 }
