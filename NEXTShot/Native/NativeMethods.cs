@@ -22,6 +22,7 @@ public static class NativeMethods
     public const int VkShift = 0x10;
     public const int VkControl = 0x11;
     public const int VkMenu = 0x12;
+    public const uint LlkhfAltDown = 0x20;
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);

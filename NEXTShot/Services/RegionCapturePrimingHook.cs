@@ -5,30 +5,49 @@ using NEXTShot.Native;
 namespace NEXTShot.Services;
 
 /// <summary>
-/// Захват экрана на WM_KEYDOWN до закрытия всплывающих подсказок и до показа оверлея.
+/// LL-хук: priming кадра области на keydown и диспетчер горячих клавиш, если WM_HOTKEY не доходит.
 /// </summary>
 public sealed class RegionCapturePrimingHook : IDisposable
 {
+    private sealed class HotkeyBinding
+    {
+        public required uint Vk;
+        public required uint Modifiers;
+        public required bool PrimeDesktop;
+        public required Action? Handler;
+    }
+
     private readonly object _lock = new();
+    private readonly List<HotkeyBinding> _bindings = new();
     private Bitmap? _pending;
     private IntPtr _hook;
     private NativeMethods.LowLevelKeyboardProc? _proc;
-    private uint _vk = NativeMethods.VkSnapshot;
-    private uint _modifiers;
-    private bool _regionHotkeyRegistered = true;
     private Func<bool>? _captureCursor;
-    private Action? _fallbackRegionCapture;
-    private long _lastFallbackInvokeTick;
 
-    public void Configure(AppSettings settings, bool regionHotkeyRegistered, Func<bool> captureCursor, Action fallbackRegionCapture)
+    public void Configure(
+        AppSettings settings,
+        Func<bool> captureCursor,
+        Action regionCapture,
+        Action windowCapture,
+        Action fullCapture,
+        Action videoToggle)
     {
-        _vk = NativeMethods.ParseHotkeyKey(settings.HotkeyRegionScreenshot);
-        _modifiers = NativeMethods.ParseHotkeyModifiers(settings.HotkeyRegionScreenshot);
-        _regionHotkeyRegistered = regionHotkeyRegistered;
         _captureCursor = captureCursor;
-        _fallbackRegionCapture = fallbackRegionCapture;
+        _bindings.Clear();
+        _bindings.Add(MakeBinding(settings.HotkeyRegionScreenshot, prime: true, regionCapture));
+        _bindings.Add(MakeBinding(settings.HotkeyActiveWindowScreenshot, prime: false, windowCapture));
+        _bindings.Add(MakeBinding(settings.HotkeyFullScreenshot, prime: false, fullCapture));
+        _bindings.Add(MakeBinding(settings.HotkeyVideoRecording, prime: false, videoToggle));
         EnsureInstalled();
     }
+
+    private static HotkeyBinding MakeBinding(string spec, bool prime, Action handler) => new()
+    {
+        Vk = NativeMethods.ParseHotkeyKey(spec),
+        Modifiers = NativeMethods.ParseHotkeyModifiers(spec),
+        PrimeDesktop = prime,
+        Handler = handler
+    };
 
     public Bitmap? TakePendingFrame()
     {
@@ -68,11 +87,15 @@ public sealed class RegionCapturePrimingHook : IDisposable
         if (nCode >= 0 && (wParam == (IntPtr)NativeMethods.WmKeyDown || wParam == (IntPtr)NativeMethods.WmSysKeyDown))
         {
             var data = Marshal.PtrToStructure<NativeMethods.KbdLlHookStruct>(lParam);
-            if (data.VkCode == _vk && KeyboardModifiersMatch(_modifiers))
+            foreach (var binding in _bindings)
             {
-                PrimeCaptureFrame();
-                if (!_regionHotkeyRegistered)
-                    InvokeFallbackRegionCapture();
+                if (data.VkCode != binding.Vk || !KeyboardModifiersMatch(binding.Modifiers, data.Flags))
+                    continue;
+
+                if (binding.PrimeDesktop)
+                    PrimeCaptureFrame();
+                binding.Handler?.Invoke();
+                break;
             }
         }
 
@@ -98,18 +121,10 @@ public sealed class RegionCapturePrimingHook : IDisposable
         }
     }
 
-    private void InvokeFallbackRegionCapture()
-    {
-        var now = Environment.TickCount64;
-        if (now - _lastFallbackInvokeTick < 400) return;
-        _lastFallbackInvokeTick = now;
-        _fallbackRegionCapture?.Invoke();
-    }
-
-    private static bool KeyboardModifiersMatch(uint required)
+    private static bool KeyboardModifiersMatch(uint required, uint hookFlags)
     {
         static bool Down(int vk) => (NativeMethods.GetAsyncKeyState(vk) & 0x8000) != 0;
-        var alt = Down(NativeMethods.VkMenu);
+        var alt = (hookFlags & NativeMethods.LlkhfAltDown) != 0 || Down(NativeMethods.VkMenu);
         var ctrl = Down(NativeMethods.VkControl);
         var shift = Down(NativeMethods.VkShift);
         var wantAlt = (required & (uint)NativeMethods.HotkeyModifiers.Alt) != 0;
