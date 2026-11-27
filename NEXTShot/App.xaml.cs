@@ -22,6 +22,9 @@ public partial class App : Application
     private SingleInstanceService? _singleInstance;
     private RegionCapturePrimingHook? _regionPriming;
     private long _lastRegionCaptureTick;
+    private long _lastWindowCaptureTick;
+    private long _lastFullCaptureTick;
+    private long _lastVideoToggleTick;
     private int _regionCaptureNestDepth;
     private RegionCaptureWindow? _activeRegionOverlay;
     private bool _videoPanelHiddenForNested;
@@ -51,11 +54,11 @@ public partial class App : Application
         _regionPriming = new RegionCapturePrimingHook();
         _tray = (TaskbarIcon)FindResource("TrayIcon");
         _hotkeys.RegionCaptureRequested += () => Dispatcher.BeginInvoke(RequestRegionCapture);
-        _hotkeys.WindowCaptureRequested += () => Dispatcher.BeginInvoke(CaptureWindow);
-        _hotkeys.FullScreenCaptureRequested += () => Dispatcher.BeginInvoke(CaptureFull);
-        _hotkeys.VideoToggleRequested += () => Dispatcher.BeginInvoke(ToggleVideo);
+        _hotkeys.WindowCaptureRequested += () => Dispatcher.BeginInvoke(RequestWindowCapture);
+        _hotkeys.FullScreenCaptureRequested += () => Dispatcher.BeginInvoke(RequestFullCapture);
+        _hotkeys.VideoToggleRequested += () => Dispatcher.BeginInvoke(RequestVideoToggle);
         _hotkeys.RegisterFromSettings(_settings);
-        ConfigureRegionPrimingHook();
+        ConfigureGlobalHotkeyHook();
         if (!_hotkeys.RegionHotkeyRegistered)
         {
             _tray?.ShowBalloonTip(SkrinshoterStrings.AppName,
@@ -81,9 +84,9 @@ public partial class App : Application
     }
 
     private void CaptureRegion_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(RequestRegionCapture);
-    private void CaptureWindow_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(CaptureWindow);
-    private void CaptureFull_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(CaptureFull);
-    private void ToggleVideo_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(ToggleVideo);
+    private void CaptureWindow_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(RequestWindowCapture);
+    private void CaptureFull_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(RequestFullCapture);
+    private void ToggleVideo_OnClick(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(RequestVideoToggle);
     private void Settings_OnClick(object sender, RoutedEventArgs e)
     {
         try
@@ -101,17 +104,22 @@ public partial class App : Application
     private void ReloadHotkeys()
     {
         _hotkeys.RegisterFromSettings(_settings);
-        ConfigureRegionPrimingHook();
+        ConfigureGlobalHotkeyHook();
         _videoPanel?.ApplySettings(_settings);
         SyncVideoPanelState();
         _automaticUpdates?.OnSettingsChanged();
     }
 
-    private void ConfigureRegionPrimingHook()
+    private void ConfigureGlobalHotkeyHook()
     {
         _regionPriming ??= new RegionCapturePrimingHook();
-        _regionPriming.Configure(_settings, _hotkeys.RegionHotkeyRegistered, () => _settings.CaptureCursor,
-            () => Dispatcher.BeginInvoke(RequestRegionCapture));
+        _regionPriming.Configure(
+            _settings,
+            () => _settings.CaptureCursor,
+            () => Dispatcher.BeginInvoke(RequestRegionCapture),
+            () => Dispatcher.BeginInvoke(RequestWindowCapture),
+            () => Dispatcher.BeginInvoke(RequestFullCapture),
+            () => Dispatcher.BeginInvoke(RequestVideoToggle));
     }
 
     private RegionCaptureWindow CreateRegionOverlay() => new(
@@ -125,10 +133,34 @@ public partial class App : Application
 
     private void RequestRegionCapture()
     {
-        var now = Environment.TickCount64;
-        if (now - _lastRegionCaptureTick < 400) return;
-        _lastRegionCaptureTick = now;
+        if (!TryConsumeHotkeyGate(ref _lastRegionCaptureTick)) return;
         CaptureRegion();
+    }
+
+    private void RequestWindowCapture()
+    {
+        if (!TryConsumeHotkeyGate(ref _lastWindowCaptureTick)) return;
+        CaptureWindow();
+    }
+
+    private void RequestFullCapture()
+    {
+        if (!TryConsumeHotkeyGate(ref _lastFullCaptureTick)) return;
+        CaptureFull();
+    }
+
+    private void RequestVideoToggle()
+    {
+        if (!TryConsumeHotkeyGate(ref _lastVideoToggleTick)) return;
+        ToggleVideo();
+    }
+
+    private static bool TryConsumeHotkeyGate(ref long lastTick)
+    {
+        var now = Environment.TickCount64;
+        if (now - lastTick < 400) return false;
+        lastTick = now;
+        return true;
     }
 
     private void CaptureRegion()
